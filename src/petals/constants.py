@@ -15,7 +15,7 @@ import torch
 PUBLIC_INITIAL_PEERS = ['/ip4/172.18.250.110/tcp/31330/p2p/12D3KooWNeU7APFiBEbricHjwQxhrQhQFk2emWMNuL87QtgCPwYE']
 
 # The reachability API is currently used only when connecting to the public swarm
-REACHABILITY_API_URL = "https://health.petals.dev"
+REACHABILITY_API_URL = "https://dashboard.hypertensor.org"
 
 DTYPE_MAP = dict(bfloat16=torch.bfloat16, float16=torch.float16, float32=torch.float32, auto="auto")
 
