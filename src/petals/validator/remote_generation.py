@@ -150,10 +150,14 @@ class RemoteGenerationMixin(_SkipTokensMixin):
 
     @docstring_from(transformers.GenerationMixin.generate.__doc__)
     def generate_tensors(
-        self, inputs: Optional[torch.Tensor] = None, *args, session: Optional[InferenceSession] = None, **kwargs
+        self, 
+        inputs: Optional[torch.Tensor] = None, 
+        *args, 
+        session: Optional[InferenceSession] = None, 
+        **kwargs
     ):
         """
-        Generate with tensor history and return session tensors per step.
+        Generate with tensor history and return cached_server_sessions per step.
         """
         self._fix_generate_kwargs(kwargs)
         if inputs is None:
@@ -181,13 +185,13 @@ class RemoteGenerationMixin(_SkipTokensMixin):
                 session_max_length += (inputs.shape[1] if inputs is not None else 0) + max_new_tokens
 
             peers = kwargs.pop("peers", None)
-            tensors = kwargs.pop("tensors", None)
+            cached_server_sessions = kwargs.pop("cached_server_sessions", None)
 
             # context_manager = self.inference_session(max_length=session_max_length)
             context_manager = self.inference_session(
                 max_length=session_max_length,
                 peers=peers,
-                tensors=tensors
+                cached_server_sessions=cached_server_sessions
             )
 
         with context_manager as session:

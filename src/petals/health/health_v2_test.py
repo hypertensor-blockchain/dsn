@@ -6,7 +6,7 @@ from typing import List
 
 import hivemind
 import numpy as np
-# from multiaddr import Multiaddr
+
 from hivemind.p2p.multiaddr import Multiaddr
 from petals.data_structures import UID_DELIMITER, ServerState
 from petals.utils.dht import compute_spans, get_remote_module_infos

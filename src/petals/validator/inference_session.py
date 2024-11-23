@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import asyncio
 import itertools
+import pprint
 import time
 import uuid
-from typing import AsyncIterator, List, Optional, Tuple
+from typing import AsyncIterator, Dict, List, Optional, Tuple
 
 import torch
 from hivemind import MSGPackSerializer, anext, deserialize_torch_tensor, get_logger, serialize_torch_tensor
@@ -224,7 +225,13 @@ class InferenceSession:
     An interface to a multi-step *inference* session for a sequence of remote transformer blocks
     """
 
-    def __init__(self, sequence_manager: RemoteSequenceManager, max_length: int):
+    def __init__(
+        self, 
+        sequence_manager: RemoteSequenceManager, 
+        max_length: int,
+        peers: Optional[List[Dict]] = None, 
+        cached_server_sessions: Optional[List] = None
+    ):
         self._sequence_manager = sequence_manager
         self._closed = False
         self._server_sessions = []
@@ -232,6 +239,11 @@ class InferenceSession:
         self._max_length = max_length
         self.output_ids = None
         self.past_key_values = None
+        self.peers = peers
+        self.inference_session_data = []
+        self.cached_server_sessions = cached_server_sessions
+        print("InferenceSession peers", self.peers)
+        print("InferenceSession cached_server_sessions", self.cached_server_sessions)
 
     @property
     def num_blocks(self) -> int:
@@ -332,21 +344,29 @@ class InferenceSession:
                         self._update_sequence(server_idx, block_idx, attempt_no)
 
                     server_session = self._server_sessions[server_idx]
-                    assert server_session.position == self.position, f"{server_session.position} and {self.position}"
+
+                    print("server_session server_idx", server_idx)
+                    print("server_session.position", server_session.position)
+                    print("self.position          ", self.position)
+                    print("server_session.session_id          ", server_session.session_id)
+
+                    
+                    # assert server_session.position == self.position, f"{server_session.position} and {self.position}"
 
                     # Get tensor history that matches the exact server_idx, start, and end
-                    tensors = self.get_tensor_history(
+                    cached_server_sessions = self.get_cached_server_sessions(
                         server_idx, 
                         server_session.span.start, 
                         server_session.span.end,
                         self._position
                     )
 
-
-                    if tensors is not None:
-                        inputs = tensors["inputs"]
-                        block_idx = tensors["span_end"]
-                    else:                        
+                    if cached_server_sessions is not None:
+                        # cached_server_sessions position always matches or ``is None`` so no need to assert position
+                        inputs = cached_server_sessions["inputs"]
+                        block_idx = cached_server_sessions["span_end"]
+                    else:
+                        # assert server_session.position == self.position, f"{server_session.position} and {self.position}"
                         inputs = server_session.step(
                             inputs, 
                             prompts[server_session.span.start : server_session.span.end], 
@@ -374,7 +394,6 @@ class InferenceSession:
                     )
 
                     server_idx += 1
-                    block_idx = server_session.span.end
                     self._sequence_manager.on_request_success(server_session.span.peer_id)
                     break
                 except Exception as e:
@@ -386,7 +405,8 @@ class InferenceSession:
                     delay = self._sequence_manager.get_retry_delay(attempt_no)
                     logger.warning(
                         f"Caught exception when running inference via {server_session.span if server_session is not None else None} "
-                        f"(retry in {delay:.0f} sec): {repr(e)}"
+                        f"(retry in {delay:.0f} sec): {repr(e)}",
+                        exc_info=True,
                     )
                     maybe_log_traceback(e)
                     time.sleep(delay)
@@ -396,17 +416,17 @@ class InferenceSession:
         outputs = outputs.to(device=inputs_device, dtype=inputs_dtype)
         return outputs
 
-    def get_tensor_history(self, server_idx, start, end, position):
-        if self.tensors is None:
+    def get_cached_server_sessions(self, server_idx, start, end, position):
+        if self.cached_server_sessions is None:
             return None
         else:
-            for tensor in self.tensors:
+            for cached_session in self.cached_server_sessions:
                 if (
-                    tensor["server_idx"] == server_idx and 
-                    tensor["span_start"] == start and
-                    tensor["position"] == position
+                    cached_session["server_idx"] == server_idx and 
+                    cached_session["span_start"] == start and
+                    cached_session["position"] == position
                 ):
-                    return tensor
+                    return cached_session
         return None
 
     def _update_sequence(self, server_idx: int, block_idx: int, attempt_no: int) -> int:
@@ -424,7 +444,11 @@ class InferenceSession:
         if self.peers is not None:
             logger.info(f"Running inference with specific peers {self.peers}")
             updated_spans = self._sequence_manager.make_sequence(
-                block_idx, update_end, mode="specific_peers_single_block", cache_tokens_needed=self._max_length, peers=self.peers
+                block_idx, 
+                update_end, 
+                mode="specific_peers_single_block", 
+                cache_tokens_needed=self._max_length, 
+                peers=self.peers
             )
         else:
             updated_spans = self._sequence_manager.make_sequence(

@@ -10,7 +10,7 @@ import multiprocessing as mp
 from petals.validator.config import AccountantData, AccountantDataPeerParams, PeerInferenceResults, PeerInferenceSequenceData, PeerValidationData
 # from petals.validator.routing.sequence_manager import MissingBlocksError
 # from petals.data_structures import RemoteSpanInfo
-from petals.health.state_updater import get_peers_data_list_with_dht
+from petals.health.state_updater import get_peers_data_list, get_peers_data_list_with_dht
 # from petals.substrate.chain_functions import propose_model_peer_dishonest, vote_model_peer_dishonest
 from petals.utils.auto_config import AutoDistributedModelForCausalLMValidator
 # from petals.substrate import config as substrate_config
@@ -334,7 +334,7 @@ class InferenceValidator(threading.Thread):
                 for peer_validation_span in peers_validation_spans:
                     # Iterate and validate peer by peer
                     for peer in peer_validation_span:
-                        tensors = []
+                        cached_server_sessions = []
                         span_ranges = []
                         block = 0
                         # Get full range of cache history if available to limit computation
@@ -350,18 +350,18 @@ class InferenceValidator(threading.Thread):
                                 print("\n", block, block+1)
                                 pprint.pprint(input_tensors)
                                 if input_tensors is not None:
-                                    tensors.append(input_tensors)
+                                    cached_server_sessions.append(input_tensors)
                                     block = input_tensors[0]["span_end"]
                                 else:
                                     # If None, it will be filled in automatically when running the remote inference sequence
                                     block += 1
 
-                        # Combine tensors into one array
+                        # Combine cached_server_sessions into one array
                         sequence_tensors = []
-                        for arr in tensors:
+                        for arr in cached_server_sessions:
                             sequence_tensors += arr
 
-                        logger.info(f"Running inference with {len(sequence_tensors)} input tensors and {len(span_ranges)} peers")
+                        logger.info(f"Running inference with {len(sequence_tensors)} input cached_server_sessions and {len(span_ranges)} peers")
 
                         sequence_data = self.run_inference_with_tensors(
                             self.input_data, 
@@ -385,262 +385,6 @@ class InferenceValidator(threading.Thread):
                 time.sleep(10)
                 continue
 
-    # def run_validator(self):
-    #     """
-    #         1. Find the least amount of blocks to validate
-    #             - We find the lowest end block and the highest start block as the span to validate
-    #             - Accountant always starts at 0 though instead of the lowest end block until future iterations
-    #         2. Run inference on the least amount of blocks starting at 0 up to the max block using Accountant only for inference sequence
-    #             - This can take multiple iterations to complete
-    #                 - e.g. If the accountant has 40/80 blocks and the max block is 80, it will take
-    #                 2 iterations to complete
-    #             - This sequence data is cached locally to use in validations in order to save on compute
-    #               for the validating remote sequence runs including peers
-    #             - By using only the Accountant in the sequence, the accountants data is assumed honest so others can not corrupt
-    #               the sequence data
-    #                 - This also allows other accountants to know for sure that another accountant is dishonest because the data they 
-    #                   submit is always checked against their own
-    #         3. Run inference of other peers to validate by injecting them inside the blocks using the cached data
-    #             - Only the block(s) used to validate peers are used in the sequence for inference
-    #             - The other blocks not selected for the sequence are not ran and the cached data is used in its place instead
-    #         4. Validate accountant inference outputs from the first accountant-only runs versus the peers we validated
-    #             - Validate by checking relative and absolute tolerances
-    #         -  If chosen epoch-Accountant, submit all data of each peers data to the blockchain
-    #         -  If an Accountant in general, and found a dishonest peer, submit a dishonesty proposal
-
-
-    #         Servers:        [00] [01] [02] [03] [04] [05] [06] [07] [08] [09] [10] [11] [12]
-    #         Server Indexes: [   0   ]    |    |    |    |    |    |    |    |    |    |    |
-    #                              [   1   ]    |    |    |    |    |    |    |    |    |    |
-    #                                   [   2   ]    |    |    |    |    |    |    |    |    |
-    #                                        [   3   ]    |    |    |    |    |    |    |    |
-    #                                             [   4   ]    |    |    |    |    |    |    |
-    #                                                  [   5   ]    |    |    |    |    |    |
-    #                                                       [   6   ]    |    |    |    |    |
-    #                                                            [   7   ]    |    |    |    |
-    #                                                                 [   8   ]    |    |    |
-    #                                                                      [   9   ]    |    |
-    #                                                                           [   10  ]    |
-    #                                                                                [   11  ]
-
-    #         1. Only run if is an accountant, otherwise wait until is accountant
-    #         2.                                                                        
-    #     """            
-    #     while True:
-    #         # Begin epoch 
-    #         epoch = self._get_epoch()
-
-
-    #         if not self._is_accountant():
-    #             seconds_remaining_in_epoch = self._get_seconds_remaining_in_epoch()
-    #             logger.info(f"Next epoch is {seconds_remaining_in_epoch} seconds away, sleeping for remaining time")
-    #             time.sleep(seconds_remaining_in_epoch)
-    #             continue
-
-    #         # Reset accountant data for the new epoch
-    #         self.accountant_data.reset()
-
-    #         # Ensure that module container is created
-    #         logger.info(f"Verifying validator blocks have begun")
-    #         if self.server.module_container is None:
-    #             # Restart loop
-    #             logger.info("Module container not loaded yet")
-    #             time.sleep(30)
-    #             continue
-
-    #         # Ensure that module container is initialized
-    #         logger.info(f"Verifying validator blocks are healthy")
-    #         if not self.server.module_container.is_healthy():
-    #             # Restart loop
-    #             logger.info("Module container not healthy yet")
-    #             time.sleep(30)
-    #             continue
-
-    #         try:
-    #             logger.info("Setting status to validator")
-    #             self.server.is_validator = True
-
-    #             # self.run_inference_as_accountant(
-    #             #     self.input_data, 
-    #             #     peers=accountant_span
-    #             # )
-
-    #             if self.epoch == 0 and (self.peers_data_to_validate is None or len(self.peers_data_to_validate) == 0):
-    #                 # Restart loop
-    #                 logger.info("Updating peers within the epoch")
-    #                 self.update_peers()
-
-    #             # Ensure other peers are present to validate
-    #             if self.peers_data_to_validate == None or len(self.peers_data_to_validate) == 0:
-    #                 logger.info("There are zero peers, waiting for other peers to join")
-    #                 break
-
-    #             logger.info("Getting sequences of peers to validate")
-    #             peers_validation_spans = self.get_peers_validation_spans()
-    #             logger.info(f"Found {len(peers_validation_spans)} sequences")
-
-    #             # Get max start block 
-    #             logger.info(f"Getting min/max blocks for Accountant to get inference data of")
-    #             blocks = self.get_min_max_start_block_from_sequences(peers_validation_spans)
-
-    #             min_block = 0
-    #             max_block = blocks[1]
-    #             num_blocks = self.num_blocks
-    #             if num_blocks > max_block:
-    #                 num_blocks = max_block
-
-    #             logger.info("Getting all ranges for Accountant to run inference sequences based on peers distributions")
-    #             spans = []
-    #             for index, value in enumerate(range(0, max_block+max_block-min_block, num_blocks)):
-    #                 if index == 0:
-    #                     spans.append([value, value + num_blocks])
-    #                 else:
-    #                     if value + num_blocks > max_block:
-    #                         if value + num_blocks - num_blocks != max_block:
-    #                             spans.append([value + num_blocks - num_blocks, max_block])
-    #                         break
-    #                     else:
-    #                         spans.append([value + num_blocks - num_blocks, value + num_blocks])
-
-    #             print("spans", spans)
-
-    #             logger.info("Gathering sequence to run as Accountant to cache the data")
-    #             accountant_spans = []
-    #             for span in spans:
-    #                 start = span[0]
-    #                 end = span[1]
-
-    #                 accountant_span_ranges = []
-    #                 for index, value in enumerate(range(start, end+end-start, 2)):
-    #                     if index == 0:
-    #                         # accountant_span_ranges.append([value, value + 1])
-    #                         accountant_span_ranges.append({
-    #                             'peer_id':self.my_peer_id,
-    #                             'start':value,
-    #                             'end':value + 1,
-    #                         })
-    #                     else:
-    #                         # accountant_span_ranges.append([value-index, value-index + 1])
-    #                         accountant_span_ranges.append({
-    #                             'peer_id':self.my_peer_id,
-    #                             'start':value-index,
-    #                             'end':value-index + 1,
-    #                         })
-
-    #                 accountant_spans.append(accountant_span_ranges)
-
-    #             print("accountant_spans", accountant_spans)
-
-    #             if self.model is None:
-    #                 # kwargs = {"dht": self.dht}
-    #                 # self.model = AutoDistributedModelForCausalLMValidator.from_pretrained(self.model_name, **kwargs)
-    #                 # self.model = AutoDistributedModelForCausalLMValidator.from_pretrained(self.model_name, {"dht": self.dht})
-    #                 self.model = AutoDistributedModelForCausalLMValidator.from_pretrained(self.model_name)
-
-    #             logger.info("Running inference on accountant spans and storing inference results")
-    #             for accountant_span in accountant_spans:
-    #                 span_start = accountant_span[0]["start"]
-    #                 span_end = accountant_span[-1]["end"]
-
-    #                 block_indices = f"{span_start}:{span_end}"
-    #                 print("accountant_span block_indices", block_indices)
-
-    #                 logger.info(f"Updating strict blocks to {block_indices} if needed")
-    #                 self.server.update_strict_block_indices(block_indices)
-    #                 while True:
-    #                     logger.info(f"Verifying validator blocks have begun")
-    #                     if self.server.module_container is None:
-    #                         # Restart loop
-    #                         logger.info("Module container not loaded yet")
-    #                         time.sleep(MODULE_CONTAINER_WAIT)
-    #                         continue
-
-    #                     start_block = self.server.module_container.server_info.start_block
-    #                     end_block = self.server.module_container.server_info.end_block
-
-    #                     if start_block != span_start and end_block != span_end:
-    #                         logger.info("Blocks don't match yet")
-    #                         time.sleep(MODULE_CONTAINER_WAIT)
-    #                         continue
-
-    #                     # Example: Wait until blocks are updated
-    #                     # This is a hack attempt - need to instead check for that blocks have been updated to the correct spans
-    #                     logger.info(f"Verifying validator blocks are healthy")
-    #                     if not self.server.module_container.is_healthy():
-    #                         # Restart loop
-    #                         logger.info("Module container not healthy yet")
-    #                         time.sleep(MODULE_CONTAINER_WAIT)
-    #                         continue
-                        
-    #                     logger.info(f"Running inference as an Accountant on block indices {block_indices} and storing results")
-    #                     self.run_inference_as_accountant(
-    #                         self.input_data, 
-    #                         peers=accountant_span
-    #                     )
-
-    #                     break
-
-    #             logger.info("Complete inference sequence as Accountant using self")
-    #             logger.info(f"Accountant has {len(self.my_inference_sequence_cache)} results cached")
-
-    #             ####
-    #             # Go peer by peer using cached data and injecting peer inside sequence to limit computations
-    #             # Current implementation only supports double spans as in 0:1 or 2:3
-    #             logger.info(f"Building sequence of spans {block_indices} to run sequence with other peers")                
-    #             for peer_validation_span in peers_validation_spans:
-    #                 # Iterate and validate peer by peer
-    #                 for peer in peer_validation_span:
-    #                     tensors = []
-    #                     span_ranges = []
-    #                     block = 0
-    #                     # Get full range of cache history if available to limit computation
-    #                     while block <= max_block:
-    #                         if peer["start"] == block:
-    #                             # Add peer to sequence
-    #                             span_ranges.append(peer)
-    #                             block = peer["end"]
-    #                         else:
-    #                             # Add accountant sequence cache to sequence
-    #                             input_tensors = self.get_account_input_tensors(block, block+1)
-    #                             print("\npeer_validation_span input_tensors")
-    #                             print("\n", block, block+1)
-    #                             pprint.pprint(input_tensors)
-    #                             if input_tensors is not None:
-    #                                 tensors.append(input_tensors)
-    #                                 block = input_tensors[0]["span_end"]
-    #                             else:
-    #                                 # If None, it will be filled in automatically when running the remote inference sequence
-    #                                 block += 1
-
-    #                     # Combine tensors into one array
-    #                     sequence_tensors = []
-    #                     for arr in tensors:
-    #                         sequence_tensors += arr
-
-    #                     logger.info(f"Running inference with {len(sequence_tensors)} input tensors and {len(span_ranges)} peers")
-
-    #                     sequence_data = self.run_inference_with_tensors(
-    #                         self.input_data, 
-    #                         peers=span_ranges,
-    #                         input_tensor=sequence_tensors
-    #                     )
-    #                     print("before validate_inference_results", peer)
-    #                     self.validate_inference_results(peer, sequence_data)
-    #                     break #testing
-
-    #             # print('\naccountant_data\n')
-    #             # pprint.pprint(self.accountant_data.data)
-
-    #         except Exception as e:
-    #             logger.error("Error 1551", e)
-    #         finally:
-    #             self.server.remove_strict_block_indices()
-    #             self.server.is_validator = False
-    #             seconds_remaining_in_epoch = self._get_seconds_remaining_in_epoch()
-    #             logger.info(f"Next epoch is {seconds_remaining_in_epoch} seconds away, sleeping for remaining time")
-    #             time.sleep(10)
-    #             continue
-
     def _is_module_container_healthy(self) -> bool:
         logger.info(f"Verifying validator blocks have begun")
         if self.server.module_container is None:
@@ -655,8 +399,6 @@ class InferenceValidator(threading.Thread):
             return False
 
         return True
-
-
 
     def listen_for_proposals(self):
         # TODO: Implement logic to listen for proposals and process them
@@ -748,11 +490,13 @@ class InferenceValidator(threading.Thread):
                 max_new_tokens=5,
             )
 
+            pprint.pprint("run_inference_as_accountant decode", self.tokenizer.decode(outputs[0]))
+
             my_inference_sequence_cache = self.get_accountant_inference_results(inference_session_data)
             self.push_inference_sequence_cache(my_inference_sequence_cache)
 
         except Exception as e:
-            logger.warning(f"Accountant Inference Validation Error: {e}")
+            logger.warning(f"Inference Validation Error: {e}")
 
     def run_inference_with_tensors(
         self, 
@@ -769,11 +513,12 @@ class InferenceValidator(threading.Thread):
                 _input_data, 
                 peers=peers,
                 max_new_tokens=5,
-                tensors=input_tensor
+                cached_server_sessions=input_tensor
             )
+            pprint.pprint("run_inference_with_tensors decode", self.tokenizer.decode(outputs[0]))
             return inference_session_data
         except Exception as e:
-            logger.warning(f"Accountant Inference Validation Error: {e}")
+            logger.warning(f"Inference Validation Error: {e}")
 
     def push_inference_sequence_cache(self, sequence: List):
         """This data sent in here should only be matched with self.my_peer_id"""
@@ -950,8 +695,8 @@ class InferenceValidator(threading.Thread):
     def update_peers(self):
         self.peers_data = []
         self.peers_data_to_validate = []
-        # peers_data_list = get_peers_data_list()
-        peers_data_list = get_peers_data_list_with_dht(self.dht)
+        peers_data_list = get_peers_data_list()
+        # peers_data_list = get_peers_data_list_with_dht(self.dht)
         print("update_peers peers_data_list", peers_data_list)
         if peers_data_list is None or len(peers_data_list) == 0:
             return 

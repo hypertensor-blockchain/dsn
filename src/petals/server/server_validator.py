@@ -160,8 +160,9 @@ class Server:
             logger.info(f"Connecting to a private swarm, initial peers: {initial_peers}")
         logger.info(f"Running a server on {visible_maddrs_str}")
         self.should_validate_reachability = not skip_reachability_check and initial_peers == PUBLIC_INITIAL_PEERS
-
+    
         all_peers = initial_peers + PUBLIC_INITIAL_PEERS + visible_maddrs_str
+        # all_peers = initial_peers + PUBLIC_INITIAL_PEERS
         all_peers = list(set(all_peers))
 
         f = open(TEMP_INITIAL_PEERS_LOCATION, "w")

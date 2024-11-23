@@ -261,13 +261,10 @@ class Server:
             using_relay=reachable_via_relay,
             **throughput_info,
         )
-        print("server_info")
-        print("num_hidden_layers", self.block_config.num_hidden_layers)
+
         self.model_info = ModelInfo(num_blocks=self.block_config.num_hidden_layers)
         if not os.path.isdir(converted_model_name_or_path):
             self.model_info.repository = "https://huggingface.co/" + converted_model_name_or_path
-
-        print("model_info")
 
         self.balance_quality = balance_quality
         self.mean_balance_check_period = mean_balance_check_period

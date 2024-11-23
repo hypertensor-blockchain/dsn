@@ -1,3 +1,4 @@
+from ast import literal_eval
 import datetime
 import threading
 import time
@@ -6,6 +7,8 @@ from enum import Enum
 
 import hivemind
 import simplejson
+
+from petals.constants import TEMP_INITIAL_PEERS_LOCATION
 # from flask import Flask, render_template
 
 # import config
@@ -117,7 +120,22 @@ def get_peer_ids_list():
     
 def get_peers_data_list():
     try:
-        dht = hivemind.DHT(initial_peers=INITIAL_PEERS, client_mode=True, num_workers=32, start=True)
+        initial_peers = INITIAL_PEERS
+        if initial_peers is None or len(initial_peers) == 0:
+            try:
+                """
+                In the case where the first node has no ``initial_peers`` we can use themselves as the initial peer
+                if they are hosting the entire model, otherwise they will need to wait for others to join
+                """
+                f = open(TEMP_INITIAL_PEERS_LOCATION, "r")
+                f_initial_peers = f.read()
+                f_initial_peers_literal_eval = literal_eval(f_initial_peers)
+                f_initial_peers_tuple = tuple(f_initial_peers_literal_eval)
+                initial_peers = f_initial_peers_tuple
+            except Exception as e:
+                logger.error("TEMP_INITIAL_PEERS_LOCATION error: %s" % e)
+
+        dht = hivemind.DHT(initial_peers=initial_peers, client_mode=True, num_workers=32, start=True)
         state_dict = get_online_peers_data(dht)
         return state_dict
     except Exception as error:

@@ -12,11 +12,17 @@ import torch
 #     "/ip4/159.203.156.48/tcp/31338/p2p/QmQGTqmM7NKjV6ggU1ZCap8zWiyKR89RViDXiqehSiCpY5",
 # ]
 
-PUBLIC_INITIAL_PEERS = ['/ip4/172.18.250.110/tcp/31330/p2p/12D3KooWNeU7APFiBEbricHjwQxhrQhQFk2emWMNuL87QtgCPwYE']
+PUBLIC_INITIAL_PEERS = []
 
 # The reachability API is currently used only when connecting to the public swarm
 REACHABILITY_API_URL = "https://dashboard.hypertensor.org"
 
 DTYPE_MAP = dict(bfloat16=torch.bfloat16, float16=torch.float16, float32=torch.float32, auto="auto")
 
+"""
+tmp file for storing initial peers
+this helps with first-in nodes that have no initial peers listed so they can connect to the dht
+nodes can manually update this file if needed as well
+its likely best to use subnet smart contracts instead but this is an option
+"""
 TEMP_INITIAL_PEERS_LOCATION = "tmp/subnet-initial-peers"

@@ -100,14 +100,12 @@ async def _get_remote_module_infos(
     expiration_time: Optional[DHTExpiration],
     latest: bool,
 ) -> List[RemoteModuleInfo]:
-    print("_get_remote_module_infos")
     if latest:
         assert expiration_time is None, "You should define either `expiration_time` or `latest`, not both"
         expiration_time = math.inf
     elif expiration_time is None:
         expiration_time = get_dht_time()
     num_workers = len(uids) if dht.num_workers is None else min(len(uids), dht.num_workers)
-    print("_get_remote_module_infos num_workers", num_workers)
     found: Dict[ModuleUID, DHTValue] = await node.get_many(uids, expiration_time, num_workers=num_workers)
 
     modules = [RemoteModuleInfo(uid=uid, servers={}) for uid in uids]
@@ -121,7 +119,6 @@ async def _get_remote_module_infos(
         for peer_id, server_info in metadata.value.items():
             try:
                 peer_id = PeerID.from_base58(peer_id)
-                print("_get_remote_module_infos peer_id", peer_id)
                 server_info = ServerInfo.from_tuple(server_info.value)
 
                 if active_adapter and active_adapter not in server_info.adapters:

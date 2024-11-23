@@ -330,6 +330,8 @@ class InferenceSession:
                         self._update_sequence(server_idx, block_idx, attempt_no)
 
                     server_session = self._server_sessions[server_idx]
+                    print("client self.position          ", self.position)
+                    print("client server_session.position", server_session.position)
                     assert server_session.position == self.position, f"{server_session.position} and {self.position}"
                     inputs = server_session.step(
                         inputs,

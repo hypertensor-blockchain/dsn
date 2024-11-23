@@ -78,7 +78,7 @@ class RemoteSequenceManager:
         dht: Optional[DHT] = None,
         state: Optional[SequenceManagerState] = None,
     ):
-        if config.initial_peers or dht is not None:
+        if config.initial_peers or dht is None:
             try:
                 """
                 In the case where the first node has no ``initial_peers`` we can use themselves as the initial peer

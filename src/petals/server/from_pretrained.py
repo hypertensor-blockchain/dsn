@@ -43,7 +43,6 @@ def load_pretrained_block(
     cache_dir: Optional[str] = None,
     max_disk_space: Optional[int] = None,
 ) -> nn.Module:
-    print("load_pretrained_block")
     if config is None:
         config = AutoDistributedConfig.from_pretrained(model_name, use_auth_token=token)
     if cache_dir is None:
@@ -55,8 +54,6 @@ def load_pretrained_block(
     with init_empty_weights():
         block = get_model_block(config, layer_idx=block_index)
 
-    print("load_pretrained_block block", block)
-
     block_prefix = f"{config.block_prefix}.{block_index}."
     state_dict = _load_state_dict_from_repo(
         model_name,
@@ -66,8 +63,6 @@ def load_pretrained_block(
         cache_dir=cache_dir,
         max_disk_space=max_disk_space,
     )
-
-    print("load_pretrained_block state_dict")
 
     for param_name, _ in block.named_parameters():
         assert param_name in state_dict, f"{param_name} not in state dict"
