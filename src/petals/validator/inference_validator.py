@@ -195,7 +195,8 @@ class InferenceValidator(threading.Thread):
                 time.sleep(seconds_remaining_in_epoch)
                 continue
 
-
+            self.my_inference_sequence_cache = None
+            
             if self._is_chosen_accountant():
                 # If chosen accountant, submit all data of each peers data to the blockchain
                 ...
@@ -368,7 +369,7 @@ class InferenceValidator(threading.Thread):
                             peers=span_ranges,
                             input_tensor=sequence_tensors
                         )
-                        print("before validate_inference_results", peer)
+                        # print("before validate_inference_results", peer)
                         self.validate_inference_results(peer, sequence_data)
                         break #testing
 
@@ -800,18 +801,3 @@ class InferenceValidator(threading.Thread):
         #     SubstrateConfig.keypair,
         #     self.model_id
         # )
-
-    def proof_of_stake(self, peer_id: PeerID):
-        """remove a given peer from the routing table. If the routing is no longer possible, trigger an update"""
-        # if peer_id is not None:
-        #     logger.debug(f"Peer {peer_id} did not respond, banning it temporarily")
-        #     self.state.banned_peers.register_failure(peer_id)
-        # with self.lock_changes:
-        #     should_update = False
-        #     for info in self.state.sequence_info.block_infos:
-        #         info.servers.pop(peer_id, None)
-        #         if not info.servers:
-        #             should_update = True
-        #     if should_update:
-        #         self.ready.clear()
-        #         self.update(wait=False)

@@ -189,8 +189,15 @@ class _ServerInferenceSession:
             raise Exception("Session is closed, cannot perform step")
 
         n_input_tokens = inputs.shape[1]
+        print("step_cache n_input_tokens", n_input_tokens)
+
+        # assert (
+        #     outputs[0].shape == inputs.shape
+        # ), f"output activation shape is different from input shape: {outputs[0].shape} != {inputs.shape}"
 
         self._position += n_input_tokens
+
+        # return outputs[0]
 
     def _collect_next_servers(self) -> List[Tuple[str, str, int, int]]:
         next_servers = []
@@ -361,6 +368,14 @@ class InferenceSession:
 
                     server_session = self._server_sessions[server_idx]
 
+                    print("server_session server_idx", server_idx)
+                    print("server_session.position", server_session.position)
+                    print("self.position          ", self.position)
+                    print("server_session.session_id          ", server_session.session_id)
+
+                    
+                    # assert server_session.position == self.position, f"{server_session.position} and {self.position}"
+
                     # Get tensor history that matches the exact server_idx, start, and end
                     # currently works with only single spans, i.e. 1:2, 6:7, 9:10
                     cached_server_sessions = self.get_cached_server_sessions(
@@ -417,6 +432,7 @@ class InferenceSession:
                     if attempt_no + 1 == self._sequence_manager.config.max_retries:
                         raise
                     delay = self._sequence_manager.get_retry_delay(attempt_no)
+                    print("WARNING cached_server_sessions: ", self.cached_server_sessions)
                     logger.warning(
                         f"Caught exception when running inference via {server_session.span if server_session is not None else None} "
                         f"(retry in {delay:.0f} sec): {repr(e)}",
