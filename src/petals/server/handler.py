@@ -537,7 +537,7 @@ class TransformerConnectionHandler(ConnectionHandler):
         batch_size: int,
         max_length: int,
         timeout: Optional[float],
-    ) -> Sequence[Sequence[Handle]]:
+    ) -> Sequence[Sequence[Handle]]: # type: ignore
         """
         Allocate memory cache for all transformer blocks, return cache handle
         :returns: a list of {len(backends)} elements, where i-th element is a tuple of cache handles for i-th backend

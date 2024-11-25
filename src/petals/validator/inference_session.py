@@ -174,6 +174,24 @@ class _ServerInferenceSession:
 
         return outputs[0]
 
+    def step_cache(
+        self,
+        inputs: torch.Tensor,
+        outputs: list,
+    ) -> torch.Tensor:
+        """
+        Inference step: send a chunk of input tensors and receive a chunk of outputs
+        :prompts: optional DEEP prompts, added to a prefix of each layer's outputs,
+          if specified, deep prompts should have shape [num_layers, batch_size, prefix_len, hid_size]
+        """
+
+        if self.closed:
+            raise Exception("Session is closed, cannot perform step")
+
+        n_input_tokens = inputs.shape[1]
+
+        self._position += n_input_tokens
+
     def _collect_next_servers(self) -> List[Tuple[str, str, int, int]]:
         next_servers = []
         session = self.next_session
@@ -242,8 +260,6 @@ class InferenceSession:
         self.peers = peers
         self.inference_session_data = []
         self.cached_server_sessions = cached_server_sessions
-        print("InferenceSession peers", self.peers)
-        print("InferenceSession cached_server_sessions", self.cached_server_sessions)
 
     @property
     def num_blocks(self) -> int:
@@ -345,15 +361,8 @@ class InferenceSession:
 
                     server_session = self._server_sessions[server_idx]
 
-                    print("server_session server_idx", server_idx)
-                    print("server_session.position", server_session.position)
-                    print("self.position          ", self.position)
-                    print("server_session.session_id          ", server_session.session_id)
-
-                    
-                    # assert server_session.position == self.position, f"{server_session.position} and {self.position}"
-
                     # Get tensor history that matches the exact server_idx, start, and end
+                    # currently works with only single spans, i.e. 1:2, 6:7, 9:10
                     cached_server_sessions = self.get_cached_server_sessions(
                         server_idx, 
                         server_session.span.start, 
@@ -365,8 +374,12 @@ class InferenceSession:
                         # cached_server_sessions position always matches or ``is None`` so no need to assert position
                         inputs = cached_server_sessions["inputs"]
                         block_idx = cached_server_sessions["span_end"]
+                        server_session.step_cache(
+                            inputs,
+                            cached_server_sessions["prompts"]
+                        )
                     else:
-                        # assert server_session.position == self.position, f"{server_session.position} and {self.position}"
+                        assert server_session.position == self.position, f"{server_session.position} and {self.position}"
                         inputs = server_session.step(
                             inputs, 
                             prompts[server_session.span.start : server_session.span.end], 
@@ -375,23 +388,24 @@ class InferenceSession:
                         )
                         block_idx = server_session.span.end
 
-                    step_outputs = inputs[:, -n_input_tokens:]
-                    step_outputs = step_outputs.to(device=inputs_device, dtype=inputs_dtype)
-                    self.inference_session_data.append(
-                        {
-                            "server_idx": server_idx,
-                            "inputs": inputs,
-                            "outputs": step_outputs,
-                            "span_start": server_session.span.start,
-                            "span_end": server_session.span.end,
-                            "attempt_no": attempt_no,
-                            "peer_id": server_session.span.peer_id if server_session is not None else None,
-                            "server_session": str(server_session.span) if server_session is not None else None,
-                            "hypo_ids": hypo_ids,
-                            "step_id": step_id,
-                            "position": self._position,
-                        }
-                    )
+                        step_outputs = inputs[:, -n_input_tokens:]
+                        step_outputs = step_outputs.to(device=inputs_device, dtype=inputs_dtype)
+                        self.inference_session_data.append(
+                            {
+                                "server_idx": server_idx,
+                                "inputs": inputs,
+                                "outputs": step_outputs,
+                                "prompts": prompts[server_session.span.start : server_session.span.end], 
+                                "span_start": server_session.span.start,
+                                "span_end": server_session.span.end,
+                                "attempt_no": attempt_no,
+                                "peer_id": server_session.span.peer_id if server_session is not None else None,
+                                "server_session": str(server_session.span) if server_session is not None else None,
+                                "hypo_ids": hypo_ids,
+                                "step_id": step_id,
+                                "position": self._position, # get position before ``step``
+                            }
+                        )
 
                     server_idx += 1
                     self._sequence_manager.on_request_success(server_session.span.peer_id)
@@ -417,6 +431,7 @@ class InferenceSession:
         return outputs
 
     def get_cached_server_sessions(self, server_idx, start, end, position):
+        # get the cached sessions data sent in with the current inference session
         if self.cached_server_sessions is None:
             return None
         else:

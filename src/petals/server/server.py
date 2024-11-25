@@ -327,10 +327,8 @@ class Server:
         return num_blocks
 
     def run(self):
-        print("Server run()")
         while True:
             block_indices = self._choose_blocks()
-            print("Server run() block_indices", block_indices)
             self.module_container = ModuleContainer.create(
                 dht=self.dht,
                 dht_prefix=self.dht_prefix,
@@ -404,19 +402,14 @@ class Server:
             torch.mps.empty_cache()
 
     def _choose_blocks(self) -> List[int]:
-        print("_choose_blocks")
         if self.strict_block_indices is not None:
-            print("self.strict_block_indices is not None", self.strict_block_indices)
             return self.strict_block_indices
 
         # If multiple servers (e.g., launched on the same machine by a script) get to this line at the same time,
         # this delay decreases the probability of a race condition while choosing the best blocks to serve.
-        print("_choose_blocks sleep")
         time.sleep(random.random() * 2 * self.mean_block_selection_delay)
-        print("_choose_blocks sleep complete")
 
         module_infos = get_remote_module_infos(self.dht, self.module_uids, latest=True)
-        print("_choose_blocks module_infos", module_infos)
         return block_selection.choose_best_blocks(self.num_blocks, module_infos)
 
     def _should_choose_other_blocks(self) -> bool:
@@ -471,7 +464,6 @@ class ModuleContainer(threading.Thread):
         should_validate_reachability: bool,
         **kwargs,
     ) -> ModuleContainer:
-        print("ModuleContainer create()")
         module_uids = [f"{dht_prefix}{UID_DELIMITER}{block_index}" for block_index in block_indices]
         memory_cache = MemoryCache(attn_cache_bytes, max_alloc_timeout)
 

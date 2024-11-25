@@ -411,7 +411,7 @@ class RemoteSequenceManager:
                             chosen_span.end = peer['start']
                             break
 
-            logger.info(f"chosen_span {chosen_span}")
+            # logger.info(f"chosen_span {chosen_span}")
 
             assert chosen_span.start <= current_index < chosen_span.end
             span_sequence.append(dataclasses.replace(chosen_span, start=current_index))

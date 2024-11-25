@@ -71,7 +71,7 @@ class MemoryCache:
     @contextlib.asynccontextmanager
     async def allocate_cache(
         self, *descriptors: TensorDescriptor, timeout: float
-    ) -> AsyncContextManager[Sequence[Handle]]:
+    ) -> AsyncContextManager[Sequence[Handle]]: # type: ignore
         """
         Create a handle that is associated with buffers on unique device. If cache full, raises AllocationFailed.
 
@@ -193,7 +193,7 @@ class MemoryCache:
             self._memory_freed_event.clear()
 
     @contextlib.contextmanager
-    def use_cache(self, *handles: Handle) -> Sequence[torch.Tensor]:
+    def use_cache(self, *handles: Handle) -> Sequence[torch.Tensor]: # type: ignore
         """
         Return one or more tensors previously allocated with allocate_cache,
 

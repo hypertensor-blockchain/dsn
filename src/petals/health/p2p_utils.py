@@ -10,25 +10,19 @@ info_cache = hivemind.TimedStorage()
 
 
 async def check_reachability(peer_id, _, node, *, fetch_info=False, connect_timeout=5, expiration=300, use_cache=True):
-    print("check_reachability", peer_id, node, fetch_info, connect_timeout, expiration, use_cache)
     if use_cache:
-        print("use_cache")
         entry = info_cache.get(peer_id)
         if entry is not None:
             return entry.value
 
     try:
-        print("check_reachability try")
         async with timeout(connect_timeout):
-            print("with timeout")
             if fetch_info:  # For Petals servers
-                print("For Petals servers")
                 stub = TransformerConnectionHandler.get_stub(node.p2p, peer_id)
                 response = await stub.rpc_info(hivemind.proto.runtime_pb2.ExpertUID())
                 rpc_info = hivemind.MSGPackSerializer.loads(response.serialized_info)
                 rpc_info["ok"] = True
             else:  # For DHT-only bootstrap peers
-                print("For DHT-only bootstrap peers")
                 await node.p2p._client.connect(peer_id, [])
                 await node.p2p._client.disconnect(peer_id)
                 rpc_info = {"ok": True}
@@ -60,15 +54,12 @@ async def check_reachability(peer_id, _, node, *, fetch_info=False, connect_time
         #         rpc_info = {"ok": True}
     except Exception as e:
         # Actual connection error
-        print("Actual connection error")
         if not isinstance(e, asyncio.TimeoutError):
-            print("Actual connection error 1")
             message = str(e) if str(e) else repr(e)
             if message == "protocol not supported":
                 # This may be returned when a server is joining, see https://github.com/petals-infra/health.petals.dev/issues/1
                 return {"ok": True}
         else:
-            print("Actual connection error 2")
             message = f"Failed to connect in {connect_timeout:.0f} sec. Firewall may be blocking connections"
         rpc_info = {"ok": False, "error": message}
 
@@ -77,7 +68,6 @@ async def check_reachability(peer_id, _, node, *, fetch_info=False, connect_time
 
 
 async def check_reachability_parallel(peer_ids, dht, node, *, fetch_info=False):
-    print("check_reachability_parallel", peer_ids, dht, node, fetch_info)
     rpc_infos = await asyncio.gather(
         *[check_reachability(peer_id, dht, node, fetch_info=fetch_info) for peer_id in peer_ids]
     )

@@ -375,8 +375,10 @@ class InferenceValidator(threading.Thread):
                 # print('\naccountant_data\n')
                 # pprint.pprint(self.accountant_data.data)
 
+                logger.info("Completed inference validation sequence")
+
             except Exception as e:
-                logger.error("Error 1551", e)
+                logger.error("Error 1551", e, exc_info=True)
             finally:
                 self.server.remove_strict_block_indices()
                 self.server.is_validator = False
@@ -490,13 +492,15 @@ class InferenceValidator(threading.Thread):
                 max_new_tokens=5,
             )
 
-            pprint.pprint("run_inference_as_accountant decode", self.tokenizer.decode(outputs[0]))
+            # pprint.pprint("run_inference_as_accountant decode", self.tokenizer.decode(outputs[0]))
+            # pprint.pprint("run_inference_as_accountant outputs", outputs)
+            print("run_inference_as_accountant outputs decode", self.tokenizer.decode(outputs[0]))
 
             my_inference_sequence_cache = self.get_accountant_inference_results(inference_session_data)
             self.push_inference_sequence_cache(my_inference_sequence_cache)
 
         except Exception as e:
-            logger.warning(f"Inference Validation Error: {e}")
+            logger.warning(f"Inference Validation Error: {e}", exc_info=True)
 
     def run_inference_with_tensors(
         self, 
@@ -515,10 +519,11 @@ class InferenceValidator(threading.Thread):
                 max_new_tokens=5,
                 cached_server_sessions=input_tensor
             )
-            pprint.pprint("run_inference_with_tensors decode", self.tokenizer.decode(outputs[0]))
+
+            print("run_inference_with_tensors outputs decode", self.tokenizer.decode(outputs[0]))
             return inference_session_data
         except Exception as e:
-            logger.warning(f"Inference Validation Error: {e}")
+            logger.warning(f"Inference Validation Error: {e}", exc_info=True)
 
     def push_inference_sequence_cache(self, sequence: List):
         """This data sent in here should only be matched with self.my_peer_id"""

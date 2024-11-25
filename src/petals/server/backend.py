@@ -84,7 +84,7 @@ class TransformerBackend(ModuleBackend):
         self.cache_bytes_per_token: Dict[torch.device, int] = Counter()
         for descr in self.get_inference_cache_descriptors(batch_size=1, max_length=1):
             self.cache_bytes_per_token[descr.device] += descr.numel() * get_size_in_bytes(descr.dtype)
-
+        
     def get_inference_cache_descriptors(self, batch_size: int, max_length: int) -> Sequence[TensorDescriptor]:
         """Create tensor descriptors for attention cache tensors used during inference_step"""
         head_dim = self.config.hidden_size // self.config.num_attention_heads
@@ -198,7 +198,7 @@ class TransformerBackend(ModuleBackend):
             p.data = dummy
 
 
-def merge_inference_pools_inplace(backends: Dict[ExpertUID, TransformerBackend]):
+def merge_inference_pools_inplace(backends: Dict[ExpertUID, TransformerBackend]): # type: ignore
     """Replace each backend's rpc_inference pools with a combined pool runs multiple blocks in one call"""
     assert len(backends) != 0 and all(isinstance(b, TransformerBackend) for b in backends.values())
     first_pool = next(iter(backends.values())).inference_pool
@@ -214,7 +214,7 @@ def merge_inference_pools_inplace(backends: Dict[ExpertUID, TransformerBackend])
 
 
 class _MergedInferenceStep:
-    def __init__(self, backends: Dict[ExpertUID, TransformerBackend]):
+    def __init__(self, backends: Dict[ExpertUID, TransformerBackend]): # type: ignore
         self.backends = backends
 
     @torch.inference_mode()
