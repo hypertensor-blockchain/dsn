@@ -69,6 +69,8 @@ class _ServerInferenceSession:
         rpc_info: RPCInfo,
         **metadata,
     ) -> _ServerInferenceSession:
+        print("_ServerInferenceSession span.peer_id", span.peer_id)
+
         """Create a new session for a given remote module. This code is meant to be run inside RemoteExpertWorker"""
         stub = TransformerConnectionHandler.get_stub(p2p, span.peer_id)
         inputs_queue = asyncio.Queue()
@@ -368,10 +370,10 @@ class InferenceSession:
 
                     server_session = self._server_sessions[server_idx]
 
-                    print("server_session server_idx", server_idx)
-                    print("server_session.position", server_session.position)
-                    print("self.position          ", self.position)
-                    print("server_session.session_id          ", server_session.session_id)
+                    # print("server_session server_idx", server_idx)
+                    # print("server_session.position", server_session.position)
+                    # print("self.position          ", self.position)
+                    # print("server_session.session_id          ", server_session.session_id)
 
                     
                     # assert server_session.position == self.position, f"{server_session.position} and {self.position}"

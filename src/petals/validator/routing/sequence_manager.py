@@ -104,7 +104,7 @@ class RemoteSequenceManager:
         if dht is None:
             dht = DHT(
                 initial_peers=config.initial_peers,
-                client_mode=True,
+                client_mode=False,
                 num_workers=32,
                 startup_timeout=config.daemon_startup_timeout,
                 start=True,
@@ -187,7 +187,7 @@ class RemoteSequenceManager:
                 raise RuntimeError(f"peers is none with mode `specific_peer`")
             span_sequence = self._make_sequence_with_specific_peers(peers, start_index, end_index)
         elif mode == "specific_peers_single_block":
-            logger.info(f"Mode is specific_peers")
+            logger.info(f"Mode is specific_peers_single_block")
             if peers is None:
                 raise RuntimeError(f"peers is none with mode `specific_peers_single_block`")
             span_sequence = self._make_sequence_with_specific_peers_single_block(peers, start_index, end_index)
@@ -450,6 +450,7 @@ class RemoteSequenceManager:
 
             # Peers must be sent in sequential order
             if current_index in (i['start'] for i in peers):
+                chosen_span = None
                 for span in candidate_spans:
                     for peer in peers:
                         """Match peer and span start parameter"""
@@ -463,6 +464,7 @@ class RemoteSequenceManager:
                             peers.remove(peer)
                             break
                 chosen_span = chosen_peer
+                assert chosen_span is not None, "Chosen span is None"
             else:
                 # We choose longer servers to minimize the number of hops but leave some randomization
                 # to distribute the load. We also exclude servers known to be unreachable.

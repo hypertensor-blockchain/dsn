@@ -60,63 +60,72 @@ class InferenceValidator(threading.Thread):
         num_blocks: int, 
         start: bool
     ):
-        print("__init__ InferenceValidator")
         super().__init__()
-        # Server class
-        self.server = server
-        self.model = None
-        # self.model = AutoDistributedModelForCausalLMValidator.from_pretrained(model_name)
-        # self.client = substrate_config.SubstrateConfig
-        self.peers_data = None
-        self.peers_data_to_validate = None
-        # list of validated peers
-        # check each newly entered peer and store their first validation mechanism results here
-        self.validated_peer_ids = None
-
-        self.peer_id_to_last_validated: Dict[PeerID, int] = dict()
-
-        # If peers preceding in the sequence are not valid, everyone after them will be invalid
-        # We will need to rerun the sequence and recheck
-        # self.revalidate_peer_ids = None
-        self.last_timestamp = 0
+        self.server = server # Server()
         self.dht = dht
+        self.model = None
         self.my_peer_id = dht.peer_id
-        # self.my_peer_id = my_peer_id
         self.model_name = model_name
         self.num_blocks = num_blocks
         self.num_model_blocks = num_model_blocks
         self.ranges = list(itertools.combinations(range(0,num_model_blocks+1), 2))
 
-        self.my_inference_sequence_cache = None
+        #
+        # Blockchain information
+        #
+        self.model_id = None
+        # self.client = substrate_config.SubstrateConfig
+        self.epoch = 0
+
+        #
+        # Validation variables
+        #
+        self.peers_data = None
+        self.peers_data_to_validate = None
+        self.cached_inference_sequence = None
+        self.input_data = "A cat sat"
+        # Simple grammar test inputs
+        # TODO: Add environment variables for this so users can update them as they please
+        self.inputs = [
+            "The cat chases",
+            "A dog barked",
+        ]
+        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+        # If peers preceding in the sequence are not valid, everyone after them will be invalid
+        # We will need to rerun the sequence and recheck
+        self.last_timestamp = 0
+        # list of possibly nodes that are dishonest to qualify against others before submitting a proposal
+        self.poss_fault_nodes = None
+
+        #
+        # Data for blockchain proposals
+        #
+        self.accountant_data = AccountantData()
+
+
 
         # Is this epochs accountant required to submit data
         self.is_accountant = False
-        self.accountant_data = AccountantData()
 
-        # model_config = load_subnet_config()
-        # self.model_id = model_config.id
-        self.model_id = None
 
 
         # TODO: Get blacklisted peers to automatically create a dishonesty proposal for them
 
 
-        # epoch represents the time it takes to validate each peer they are designated to validdate inference
-        # TODO: Make universal for each accountant to pull from the same storage backend
-        self.epoch = 0
-
-        # tokenizer = AutoTokenizer.from_pretrained(model_name)
-        # self.input_data = tokenizer("A cat sat", return_tensors="pt")["input_ids"]
-        self.input_data = "A cat sat"
-        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
-        # self.input_tensor = self.tokenizer(self.input_data, return_tensors="pt")["input_ids"]
-
         # TODO: Run inference sequence on multiple inputs and store them in a pickle file
         #       Then the inference validator will choose at random each time they are chosen
         #       to be an Accountant. This will limit the computation needed for PoI
+        """
+        cached_inference_sequences = [
+            {
+                sequence: List,
+                last_used: int
+            }
+        ]
+        """
+        self.cached_inference_sequences = None
 
         if start:
-        #     self.run_validator()
             self.run_in_background(await_ready=True)
 
         self.stop = threading.Event()
@@ -130,8 +139,6 @@ class InferenceValidator(threading.Thread):
         t1 = threading.Thread(target=self.run_validator(), args=())
         t1.start()
         t1.join()
-
-        # self.run_validator()
 
     def run_validator(self):
         """
@@ -194,8 +201,6 @@ class InferenceValidator(threading.Thread):
                 logger.info(f"Next epoch is {seconds_remaining_in_epoch} seconds away, sleeping for remaining time")
                 time.sleep(seconds_remaining_in_epoch)
                 continue
-
-            self.my_inference_sequence_cache = None
             
             if self._is_chosen_accountant():
                 # If chosen accountant, submit all data of each peers data to the blockchain
@@ -212,11 +217,6 @@ class InferenceValidator(threading.Thread):
             try:
                 logger.info("Setting status to validator")
                 self.server.is_validator = True
-
-                # self.run_inference_as_accountant(
-                #     self.input_data, 
-                #     peers=accountant_span
-                # )
 
                 if self.epoch == 0 and (self.peers_data_to_validate is None or len(self.peers_data_to_validate) == 0):
                     # Restart loop
@@ -266,14 +266,12 @@ class InferenceValidator(threading.Thread):
                     accountant_span_ranges = []
                     for index, value in enumerate(range(start, end+end-start, 2)):
                         if index == 0:
-                            # accountant_span_ranges.append([value, value + 1])
                             accountant_span_ranges.append({
                                 'peer_id':self.my_peer_id,
                                 'start':value,
                                 'end':value + 1,
                             })
                         else:
-                            # accountant_span_ranges.append([value-index, value-index + 1])
                             accountant_span_ranges.append({
                                 'peer_id':self.my_peer_id,
                                 'start':value-index,
@@ -281,8 +279,6 @@ class InferenceValidator(threading.Thread):
                             })
 
                     accountant_spans.append(accountant_span_ranges)
-
-                print("accountant_spans", accountant_spans)
 
                 if self.model is None:
                     self.model = AutoDistributedModelForCausalLMValidator.from_pretrained(self.model_name)
@@ -326,7 +322,7 @@ class InferenceValidator(threading.Thread):
                         break
 
                 logger.info("Complete inference sequence as Accountant using self")
-                logger.info(f"Accountant has {len(self.my_inference_sequence_cache)} results cached")
+                logger.info(f"Accountant has {len(self.cached_inference_sequence)} results cached")
 
                 ####
                 # Go peer by peer using cached data and injecting peer inside sequence to limit computations
@@ -369,7 +365,6 @@ class InferenceValidator(threading.Thread):
                             peers=span_ranges,
                             input_tensor=sequence_tensors
                         )
-                        # print("before validate_inference_results", peer)
                         self.validate_inference_results(peer, sequence_data)
                         break #testing
 
@@ -379,8 +374,11 @@ class InferenceValidator(threading.Thread):
                 logger.info("Completed inference validation sequence")
 
             except Exception as e:
-                logger.error("Error 1551", e, exc_info=True)
+                logger.error(e, exc_info=True)
             finally:
+                # Reset previous epochs cached inference sequence
+                self.cached_inference_sequence = None
+                # Remove strict blocks if they are strict
                 self.server.remove_strict_block_indices()
                 self.server.is_validator = False
                 seconds_remaining_in_epoch = self._get_seconds_remaining_in_epoch()
@@ -493,9 +491,7 @@ class InferenceValidator(threading.Thread):
                 max_new_tokens=5,
             )
 
-            # pprint.pprint("run_inference_as_accountant decode", self.tokenizer.decode(outputs[0]))
-            # pprint.pprint("run_inference_as_accountant outputs", outputs)
-            print("run_inference_as_accountant outputs decode", self.tokenizer.decode(outputs[0]))
+            # print("run_inference_as_accountant outputs decode", self.tokenizer.decode(outputs[0]))
 
             my_inference_sequence_cache = self.get_accountant_inference_results(inference_session_data)
             self.push_inference_sequence_cache(my_inference_sequence_cache)
@@ -521,28 +517,28 @@ class InferenceValidator(threading.Thread):
                 cached_server_sessions=input_tensor
             )
 
-            print("run_inference_with_tensors outputs decode", self.tokenizer.decode(outputs[0]))
+            # print("run_inference_with_tensors outputs decode", self.tokenizer.decode(outputs[0]))
             return inference_session_data
         except Exception as e:
             logger.warning(f"Inference Validation Error: {e}", exc_info=True)
 
     def push_inference_sequence_cache(self, sequence: List):
         """This data sent in here should only be matched with self.my_peer_id"""
-        if self.my_inference_sequence_cache is None:
-            self.my_inference_sequence_cache = sequence
+        if self.cached_inference_sequence is None:
+            self.cached_inference_sequence = sequence
         else:
             for data in sequence:
-                span_found = next((x for x in self.my_inference_sequence_cache if x['server_idx'] == data["server_idx"]), None)
+                span_found = next((x for x in self.cached_inference_sequence if x['server_idx'] == data["server_idx"]), None)
                 
                 """Append span data if none exists"""
                 if span_found is None:
-                    self.my_inference_sequence_cache.append(data)
+                    self.cached_inference_sequence.append(data)
 
     def get_account_input_tensors(self, start, end) -> List:
         """Return all sequence outputs that match the start and end blocks"""
         print(f"get_account_input_tensors start {start}, end {end}")
 
-        inference_sequence_cache = [i for i in self.my_inference_sequence_cache if i['span_start'] == start and i['span_end'] == end]
+        inference_sequence_cache = [i for i in self.cached_inference_sequence if i['span_start'] == start and i['span_end'] == end]
 
         if inference_sequence_cache is None or len(inference_sequence_cache) == 0:
             return None
@@ -580,7 +576,7 @@ class InferenceValidator(threading.Thread):
             # Find cached results to compare
             accountant_inference_cache = self.get_inference_by_position(
                 self.my_peer_id, 
-                self.my_inference_sequence_cache, 
+                self.cached_inference_sequence, 
                 span_start, 
                 span_end, 
                 position
@@ -620,10 +616,8 @@ class InferenceValidator(threading.Thread):
 
         valid_all = True
         valid = []
-        # for data in peer_validation_data.data:
+
         for data in peer_inference_results.data:
-            # print("data ->", data)
-            # print("data.data ->", data.data)
             valid.append(data.valid)
 
         valid_count = len(valid)
@@ -651,10 +645,8 @@ class InferenceValidator(threading.Thread):
 
     def get_inference_by_position(self, peer_id, sequence_data, start, end, position) -> List:
         """Return cached inference sequence data for a given start, end, and position"""
-        # inference_data = []
         for data in sequence_data:
             if data['peer_id'] == peer_id and data['span_start'] == start and data['span_end'] == end and data['position'] == position:
-                # inference_data.append(data)
                 return data
         return None
 
@@ -702,8 +694,6 @@ class InferenceValidator(threading.Thread):
         self.peers_data = []
         self.peers_data_to_validate = []
         peers_data_list = get_peers_data_list()
-        # peers_data_list = get_peers_data_list_with_dht(self.dht)
-        print("update_peers peers_data_list", peers_data_list)
         if peers_data_list is None or len(peers_data_list) == 0:
             return 
         for peer in peers_data_list:

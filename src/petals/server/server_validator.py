@@ -41,6 +41,8 @@ from petals.utils.random import sample_up_to
 from petals.utils.version import get_compatible_model_repo
 from petals.validator.inference_validator import InferenceValidator
 
+from hivemind.dht.routing import DHTID
+
 logger = get_logger(__name__)
 
 
@@ -150,6 +152,7 @@ class Server:
             use_auto_relay=use_auto_relay,
             client_mode=reachable_via_relay,
             **kwargs,
+            # **dict(kwargs, node_id=DHTID(0xd564e9c6f20eb89ff3c3618bd8de9341aa97327a))
         )
         self.reachability_protocol = ReachabilityProtocol.attach_to_dht(self.dht) if not reachable_via_relay else None
 

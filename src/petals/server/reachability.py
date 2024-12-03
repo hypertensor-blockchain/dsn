@@ -62,6 +62,8 @@ def check_direct_reachability(max_peers: int = 5, threshold: float = 0.5, **kwar
             async with protocol.serve(target_dht.protocol.p2p):
                 successes = requests = 0
                 for remote_peer in list(target_dht.protocol.routing_table.peer_id_to_uid.keys()):
+                    print("check_direct_reachability target_dht.peer_id", target_dht.peer_id)
+                    print("check_direct_reachability remote_peer", remote_peer)
                     probe_available = await protocol.call_check(remote_peer=remote_peer, check_peer=target_dht.peer_id)
                     if probe_available is None:
                         continue  # remote peer failed to check probe
