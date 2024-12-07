@@ -134,6 +134,7 @@ class RemoteGenerationMixin(_SkipTokensMixin):
                 past_key_values = RemotePastKeyValues()
                 past_key_values.update_seen(session.position)
                 kwargs["past_key_values"] = past_key_values
+                print("past_key_values", past_key_values)
 
             result = super().generate(inputs, *args, **kwargs)
 

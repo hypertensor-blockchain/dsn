@@ -206,6 +206,9 @@ class InferenceValidator(threading.Thread):
                 # If chosen accountant, submit all data of each peers data to the blockchain
                 ...
 
+            # Reset previous epochs cached inference sequence
+            self.cached_inference_sequence = None
+
             # Reset accountant data for the new epoch
             self.accountant_data.reset()
 
@@ -319,6 +322,7 @@ class InferenceValidator(threading.Thread):
                             peers=accountant_span
                         )
 
+                        # once successful, break the loop
                         break
 
                 logger.info("Complete inference sequence as Accountant using self")
@@ -344,7 +348,7 @@ class InferenceValidator(threading.Thread):
                                 # Add accountant sequence cache to sequence
                                 input_tensors = self.get_account_input_tensors(block, block+1)
                                 print("\npeer_validation_span input_tensors")
-                                print("\n", block, block+1)
+                                print("\n peer validation span", block, block+1)
                                 pprint.pprint(input_tensors)
                                 if input_tensors is not None:
                                     cached_server_sessions.append(input_tensors)
@@ -376,8 +380,8 @@ class InferenceValidator(threading.Thread):
             except Exception as e:
                 logger.error(e, exc_info=True)
             finally:
-                # Reset previous epochs cached inference sequence
-                self.cached_inference_sequence = None
+                # # Reset previous epochs cached inference sequence
+                # self.cached_inference_sequence = None
                 # Remove strict blocks if they are strict
                 self.server.remove_strict_block_indices()
                 self.server.is_validator = False
@@ -491,7 +495,7 @@ class InferenceValidator(threading.Thread):
                 max_new_tokens=5,
             )
 
-            # print("run_inference_as_accountant outputs decode", self.tokenizer.decode(outputs[0]))
+            print("run_inference_as_accountant outputs decode", self.tokenizer.decode(outputs[0]))
 
             my_inference_sequence_cache = self.get_accountant_inference_results(inference_session_data)
             self.push_inference_sequence_cache(my_inference_sequence_cache)
@@ -525,8 +529,11 @@ class InferenceValidator(threading.Thread):
     def push_inference_sequence_cache(self, sequence: List):
         """This data sent in here should only be matched with self.my_peer_id"""
         if self.cached_inference_sequence is None:
+            logger.info("push_inference_sequence_cache is None")
+            # Push new data if it doesn't already exist
             self.cached_inference_sequence = sequence
         else:
+            logger.info("push_inference_sequence_cache is existing")
             for data in sequence:
                 span_found = next((x for x in self.cached_inference_sequence if x['server_idx'] == data["server_idx"]), None)
                 

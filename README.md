@@ -16,7 +16,7 @@
     - `python -m venv .venv`
     - `source .venv/bin/activate`
 - Install: `python -m pip install .`
-- Generate RSA private key (Optional): `openssl genpkey -algorithm RSA -out private_key.pem -pkeyopt rsa_keygen_bits:2048`
+- Generate RSA private key (Optional): `openssl genpkey -algorithm RSA -out private_key.key -pkeyopt rsa_keygen_bits:2048`
 
 <h4>Basic Usage</h4>
 
