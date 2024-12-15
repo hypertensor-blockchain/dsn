@@ -56,6 +56,7 @@ def main():
                 encoding=serialization.Encoding.DER,
                 format=serialization.PublicFormat.SubjectPublicKeyInfo,
             )
+            logger.info(f"DER RSA Public Key: {encoded_public_key}")
 
             encoded_public_key = crypto_pb2.PublicKey(
                 key_type=crypto_pb2.RSA,
@@ -80,6 +81,7 @@ def main():
             encoding=serialization.Encoding.Raw,
             format=serialization.PublicFormat.Raw,
         )
+        logger.info(f"Raw Ed25519 Public Key: {public_key}")
 
         combined_key_bytes = raw_private_key + public_key
 
@@ -109,13 +111,10 @@ def main():
             ).SerializeToString()
 
             encoded_digest = b"\x00$" + encoded_public_key
-            print("encoded_digest", encoded_digest)
 
             peer_id = PeerID(encoded_digest)
-            print("peer_id", peer_id)
 
             peer_id_to_bytes = peer_id.to_bytes()
-            print("peer_id_to_bytes", peer_id_to_bytes)
 
             assert peer_id == peer_id_to_bytes
     else:
@@ -127,7 +126,6 @@ def main():
     async def test_identity():
         p2p = await P2P.create(identity_path=path)
         p2p_peer_id = p2p.peer_id
-        print("p2p_peer_id", p2p_peer_id)
 
         await p2p.shutdown()
 
