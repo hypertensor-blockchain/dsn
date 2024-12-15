@@ -1,8 +1,7 @@
 import argparse
 import asyncio
 import hashlib
-import logging
-import configargparse
+import os
 
 from hivemind.proto import crypto_pb2
 from hivemind.p2p.p2p_daemon_bindings.datastructures import PeerID
@@ -16,18 +15,17 @@ import multihash
 
 logger = get_logger(__name__)
 
-# python -m petals.cli.keygen 
+# python -m petals.cli.crypto.keygen 
 
 def main():
-    print("running")
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("--path", type=str, required=False, default="private_key_2.key", help="File location of private key. ")
-    parser.add_argument("--key_type", type=str, required=False, default="ed25519", help="Key type used in subnet. ")
+    parser.add_argument("--path", type=str, required=False, default="private_key.key", help="File location of private key. ")
+    parser.add_argument("--key_type", type=str, required=False, default="ed25519", help="Key type used in subnet. ed25519, rsa")
 
     args = parser.parse_args()
 
     path = args.path
-    key_type = args.path.lower()
+    key_type = args.key_type.lower()
 
     if key_type is "rsa":
         # Generate the RSA private key
@@ -69,20 +67,29 @@ def main():
                 multihash.coerce_code("sha2-256"),
             )
     elif key_type == "ed25519":
+        logger.info("Generating Ed25519 private key")
         private_key = ed25519.Ed25519PrivateKey.generate()
+
+        raw_private_key = private_key.private_bytes(
+            encoding=serialization.Encoding.Raw,  # DER format
+            format=serialization.PrivateFormat.Raw,  # PKCS8 standard format
+            encryption_algorithm=serialization.NoEncryption()  # No encryption
+        )
 
         public_key = private_key.public_key().public_bytes(
             encoding=serialization.Encoding.Raw,
             format=serialization.PublicFormat.Raw,
         )
 
-        combined_key_bytes = private_key + public_key
+        combined_key_bytes = raw_private_key + public_key
 
         protobuf = crypto_pb2.PrivateKey(key_type=crypto_pb2.KeyType.Ed25519, data=combined_key_bytes)
+
 
         with open(path, "wb") as f:
             f.write(protobuf.SerializeToString())
 
+        os.chmod(path, 0o400)
         with open(path, "rb") as f:
             data = f.read()
             key_data = crypto_pb2.PrivateKey.FromString(data).data
@@ -102,12 +109,15 @@ def main():
             ).SerializeToString()
 
             encoded_digest = b"\x00$" + encoded_public_key
+            print("encoded_digest", encoded_digest)
 
             peer_id = PeerID(encoded_digest)
+            print("peer_id", peer_id)
 
             peer_id_to_bytes = peer_id.to_bytes()
+            print("peer_id_to_bytes", peer_id_to_bytes)
 
-            assert encoded_public_key == peer_id_to_bytes
+            assert peer_id == peer_id_to_bytes
     else:
         raise ValueError("Invalid key type. Supported types: rsa, ed25519")
 
@@ -117,6 +127,7 @@ def main():
     async def test_identity():
         p2p = await P2P.create(identity_path=path)
         p2p_peer_id = p2p.peer_id
+        print("p2p_peer_id", p2p_peer_id)
 
         await p2p.shutdown()
 
