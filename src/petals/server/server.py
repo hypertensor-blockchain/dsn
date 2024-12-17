@@ -324,6 +324,9 @@ class Server:
             f"Server will fill your GPU memory with {num_blocks} transformer blocks. "
             f"If you want to leave some free GPU memory, please specify a lesser --num_blocks manually"
         )
+
+        logger.info(f"Total subnet memory MB: {num_blocks * total_memory_per_block} transformer blocks. ")
+
         return num_blocks
 
     def run(self):
