@@ -18,7 +18,12 @@ from hivemind import DHT, P2P, MSGPackSerializer, PeerID
 from hivemind.dht.node import Blacklist
 from hivemind.moe.client.remote_expert_worker import RemoteExpertWorker
 from hivemind.proto import runtime_pb2
+from hivemind.utils.auth import AuthorizerBase
 from hivemind.utils.logging import get_logger
+from hivemind.proto import crypto_pb2
+from hivemind.utils.crypto import Ed25519PrivateKey
+from hivemind.utils.auth import POSAuthorizer
+from cryptography.hazmat.primitives.asymmetric import ed25519
 
 from petals.constants import TEMP_INITIAL_PEERS_LOCATION
 from petals.validator.config import ClientConfig
@@ -77,7 +82,9 @@ class RemoteSequenceManager:
         *,
         dht: Optional[DHT] = None,
         state: Optional[SequenceManagerState] = None,
+        identity_path: Optional[str] = None
     ):
+        print("RemoteSequenceManager")
         if config.initial_peers or dht is None:
             try:
                 """
@@ -101,13 +108,24 @@ class RemoteSequenceManager:
             state = SequenceManagerState()
         self.state = state
 
+        print("RemoteSequenceManager identity_path", identity_path)
         if dht is None:
+            """
+            This uses Ed25519, if you're using another algorithm for generating Peer IDs, this may need to be updated
+            """
+            with open(f"{identity_path}", "rb") as f:
+                data = f.read()
+                key_data = crypto_pb2.PrivateKey.FromString(data).data
+                raw_private_key = ed25519.Ed25519PrivateKey.from_private_bytes(key_data[:32])
+                private_key = Ed25519PrivateKey(private_key=raw_private_key)
+
             dht = DHT(
                 initial_peers=config.initial_peers,
-                client_mode=False,
+                client_mode=True,
                 num_workers=32,
                 startup_timeout=config.daemon_startup_timeout,
                 start=True,
+                authorizer=POSAuthorizer(private_key)
             )
         assert isinstance(dht, DHT) and dht.is_alive(), "`dht` must be a running hivemind.DHT instance"
         self.dht = dht

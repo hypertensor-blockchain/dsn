@@ -139,7 +139,7 @@ def main():
 
     parser.add_argument('--custom_module_path', type=str, required=False,
                         help='Path of a file with custom nn.modules, wrapped into special decorator')
-    parser.add_argument('--identity_path', type=str, required=False, help='Path to identity file to be used in P2P')
+    parser.add_argument('--identity_path', type=str, required=True, help='Path to identity file to be used in P2P, see crypto/keygen.py. ')
 
     parser.add_argument("--balance_quality", type=float, default=0.75,
                         help="Rebalance the swarm if its throughput is worse than this share of the optimal "

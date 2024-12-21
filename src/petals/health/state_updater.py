@@ -4,8 +4,11 @@ import threading
 import time
 from dataclasses import asdict, is_dataclass
 from enum import Enum
+from typing import Optional
 
 import hivemind
+from hivemind.utils.auth import AuthorizerBase
+
 import simplejson
 
 from petals.constants import TEMP_INITIAL_PEERS_LOCATION
@@ -118,7 +121,7 @@ def get_peer_ids_list():
         logger.error("Failed to get peers list:", error)
         return None
     
-def get_peers_data_list():
+def get_peers_data_list(authorizer: Optional[AuthorizerBase] = None):
     try:
         initial_peers = INITIAL_PEERS
         if initial_peers is None or len(initial_peers) == 0:
@@ -135,7 +138,13 @@ def get_peers_data_list():
             except Exception as e:
                 logger.error("TEMP_INITIAL_PEERS_LOCATION error: %s" % e)
 
-        dht = hivemind.DHT(initial_peers=initial_peers, client_mode=True, num_workers=32, start=True)
+        dht = hivemind.DHT(
+            initial_peers=initial_peers, 
+            client_mode=True, 
+            num_workers=32, 
+            start=True,
+            authorizer=authorizer
+        )
         state_dict = get_online_peers_data(dht)
         return state_dict
     except Exception as error:

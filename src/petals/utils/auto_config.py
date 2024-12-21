@@ -41,14 +41,35 @@ class _AutoDistributedBase:
             and kwargs.get("use_auth_token") is None
         ):
             kwargs["use_auth_token"] = True
+        print("_AutoDistributedBase args", args)
+        print("_AutoDistributedBase kwargs", kwargs)
+        dht = kwargs.pop('dht', None)
+        print("_AutoDistributedBase dht", dht)
+        authorizer = kwargs.pop('authorizer', None)
+        print("_AutoDistributedBase authorizer", authorizer)
+        identity_path = kwargs.pop('identity_path', None)
+        print("_AutoDistributedBase identity_path", identity_path)
 
         config = AutoConfig.from_pretrained(model_name_or_path, *args, **kwargs)
+        print("_AutoDistributedBase config", config)
         if config.model_type not in _CLASS_MAPPING:
             raise ValueError(f"Petals does not support model type {config.model_type}")
 
         proper_cls = getattr(_CLASS_MAPPING[config.model_type], cls._mapping_field)
+        print("_AutoDistributedBase proper_cls", proper_cls)
+        print("_AutoDistributedBase proper_cls", proper_cls.__name__)
+        print("_AutoDistributedBase proper_cls", proper_cls.__name__ == "DistributedBloomForCausalLMValidator")
+        print("_AutoDistributedBase proper_cls", proper_cls.__dict__)
+
         if proper_cls is None:
             raise ValueError(f"Petals does not have {cls.__name__} for model type {config.model_type}")
+
+        if proper_cls.__name__ == "DistributedBloomForCausalLMValidator":
+            print("_AutoDistributedBase is DistributedBloomForCausalLMValidator")
+            # proper_cls(authorizer=authorizer)
+            # return proper_cls.from_pretrained(model_name_or_path, *args, **kwargs, dht=dht)
+            # return proper_cls.from_pretrained(model_name_or_path, *args, **kwargs, authorizer=authorizer)
+            return proper_cls.from_pretrained(model_name_or_path, *args, **kwargs, identity_path=identity_path)
 
         return proper_cls.from_pretrained(model_name_or_path, *args, **kwargs)
 
@@ -74,6 +95,9 @@ class DefaultRevisionMixin:
     def from_pretrained(
         cls, model_name_or_path: Union[str, os.PathLike, None], *args, revision: Optional[str] = None, **kwargs
     ):
+        print("DefaultRevisionMixin args", args)
+        print("DefaultRevisionMixin kwargs", kwargs)
+
         if revision is None and model_name_or_path in cls.DEFAULT_REVISIONS:
             revision = cls.DEFAULT_REVISIONS[model_name_or_path]
             logger.info(f"Loading {model_name_or_path}, revision {revision}")

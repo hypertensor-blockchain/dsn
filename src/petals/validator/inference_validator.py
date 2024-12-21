@@ -19,6 +19,7 @@ from transformers import AutoTokenizer
 import torch
 from hivemind.utils.logging import get_logger
 from hivemind import PeerID, DHT
+from hivemind.utils.auth import AuthorizerBase
 
 import pprint 
 
@@ -55,10 +56,11 @@ class InferenceValidator(threading.Thread):
         server, 
         model_name, 
         num_model_blocks: int, 
-        # my_peer_id: str, 
         dht: DHT,
         num_blocks: int, 
-        start: bool
+        authorizer: AuthorizerBase,
+        identity_path: str,
+        start: bool,
     ):
         super().__init__()
         self.server = server # Server()
@@ -66,9 +68,11 @@ class InferenceValidator(threading.Thread):
         self.model = None
         self.my_peer_id = dht.peer_id
         self.model_name = model_name
-        self.num_blocks = num_blocks
+        self.num_blocks = num_blocks # num blocks node is powering
         self.num_model_blocks = num_model_blocks
-        self.ranges = list(itertools.combinations(range(0,num_model_blocks+1), 2))
+        # self.ranges = list(itertools.combinations(range(0,num_model_blocks+1), 2))
+        self.authorizer = authorizer
+        self.identity_path = identity_path
 
         #
         # Blockchain information
@@ -284,7 +288,7 @@ class InferenceValidator(threading.Thread):
                     accountant_spans.append(accountant_span_ranges)
 
                 if self.model is None:
-                    self.model = AutoDistributedModelForCausalLMValidator.from_pretrained(self.model_name)
+                    self.model = AutoDistributedModelForCausalLMValidator.from_pretrained(self.model_name, identity_path="private_key2.key")
 
                 logger.info("Running inference on accountant spans and storing inference results")
                 for accountant_span in accountant_spans:
@@ -700,7 +704,7 @@ class InferenceValidator(threading.Thread):
     def update_peers(self):
         self.peers_data = []
         self.peers_data_to_validate = []
-        peers_data_list = get_peers_data_list()
+        peers_data_list = get_peers_data_list(self.authorizer)
         if peers_data_list is None or len(peers_data_list) == 0:
             return 
         for peer in peers_data_list:

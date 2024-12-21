@@ -9,7 +9,7 @@ PUBLIC_INITIAL_PEERS = ["/ip4/3.16.197.70/tcp/31330/p2p/12D3KooWNujrmWnkXz9Qr4Wk
 
 def get_peers_data():
     try:
-        dht = hivemind.DHT(initial_peers=PUBLIC_INITIAL_PEERS, client_mode=True, num_workers=32, start=True)
+        dht = hivemind.DHT(initial_peers=PUBLIC_INITIAL_PEERS, client_mode=False, num_workers=32, start=True)
         state_dict = fetch_health_state2(dht)
         return state_dict
     except Exception as error:

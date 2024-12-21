@@ -16,6 +16,7 @@ import multihash
 logger = get_logger(__name__)
 
 # python -m petals.cli.crypto.keygen 
+# python -m petals.cli.crypto.keygen --path private_key2.key
 
 def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -95,9 +96,7 @@ def main():
         with open(path, "rb") as f:
             data = f.read()
             key_data = crypto_pb2.PrivateKey.FromString(data).data
-
             private_key = ed25519.Ed25519PrivateKey.from_private_bytes(key_data[:32])
-
             public_key = private_key.public_key().public_bytes(
                 encoding=serialization.Encoding.Raw,
                 format=serialization.PublicFormat.Raw,

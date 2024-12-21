@@ -54,6 +54,7 @@ def validate_reachability(peer_id, wait_time: float = 7 * 60, retry_delay: float
 
 def check_direct_reachability(max_peers: int = 5, threshold: float = 0.5, **kwargs) -> Optional[bool]:
     """test if your peer is accessible by others in the swarm with the specified network options in **kwargs"""
+    print('check_direct_reachability kwargs', ', '.join(['{}={!r}'.format(k, v) for k, v in kwargs.items()]))
 
     async def _check_direct_reachability():
         target_dht = await DHTNode.create(client_mode=True, **kwargs)
