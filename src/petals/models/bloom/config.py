@@ -29,10 +29,6 @@ class DistributedBloomConfig(BloomConfig, ClientConfig, PTuneConfig, LMHeadConfi
     def from_pretrained(
         cls, model_name_or_path: Union[str, os.PathLike, None], *args, dht_prefix: Optional[str] = None, **kwargs
     ):
-        print("DistributedBloomConfig model_name_or_path", model_name_or_path)
-        print("DistributedBloomConfig args", args)
-        print("DistributedBloomConfig kwargs", kwargs)
-
         logger.info("Make sure you follow the BLOOM terms of use: https://bit.ly/bloom-license")
 
         loading_from_repo = model_name_or_path is not None and not os.path.isdir(model_name_or_path)
@@ -47,7 +43,6 @@ class DistributedBloomConfig(BloomConfig, ClientConfig, PTuneConfig, LMHeadConfi
 VALIDATOR
 """
 class DistributedBloomConfigValidator(BloomConfig, ClientConfigValidator, PTuneConfigValidator, LMHeadConfigValidator):
-    print("DistributedBloomConfigValidator")
     block_class = WrappedBloomBlockValidator
     attn_class = BloomAttention
     block_prefix = "h"
@@ -59,10 +54,6 @@ class DistributedBloomConfigValidator(BloomConfig, ClientConfigValidator, PTuneC
         cls, model_name_or_path: Union[str, os.PathLike, None], *args, dht_prefix: Optional[str] = None, **kwargs
     ):
         # Called from _AutoDistributedBase
-        print("DistributedBloomConfigValidator model_name_or_path", model_name_or_path)
-        print("DistributedBloomConfigValidator args", args)
-        print("DistributedBloomConfigValidator kwargs", kwargs)
-
         logger.info("Make sure you follow the BLOOM terms of use: https://bit.ly/bloom-license")
 
         loading_from_repo = model_name_or_path is not None and not os.path.isdir(model_name_or_path)

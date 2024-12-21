@@ -156,8 +156,8 @@ class Server:
             is_reachable = check_direct_reachability(
                 initial_peers=initial_peers, 
                 use_relay=False, 
-                # **dict(kwargs, authorizer=POSAuthorizer(private_key))
-                **kwargs
+                **dict(kwargs, authorizer=POSAuthorizer(private_key))
+                # **kwargs
             )
             reachable_via_relay = is_reachable is False  # if can't check reachability (returns None), run a full peer
             logger.info(f"This server is accessible {'via relays' if reachable_via_relay else 'directly'}")

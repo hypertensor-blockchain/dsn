@@ -32,11 +32,9 @@ def test_execute_activate():
   max_block = proposal['max_block']
 
   while True:
-    print("waiting for execution block")
     time.sleep(BLOCK_SECS)
     block_hash = substrate_config.interface.get_block_hash()
     block_number = substrate_config.interface.get_block_number(block_hash)
-    print("block_number", block_number)
     if block_number > max_block:
       execute_proposal(
         substrate_config.interface,

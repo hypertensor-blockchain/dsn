@@ -123,7 +123,6 @@ def get_blockchain_peers_consensus_data(
     blockchain_peers.append(dict)
 
   """Get scores as a percentage share"""
-  print("Get scores as share")
   for model_peer in blockchain_peers:
     score = int(model_peer['score'] / scores_sum * 1e4)
     model_peer['score'] = score
@@ -178,7 +177,6 @@ def get_consensus_data(substrate: SubstrateInterface, subnet_id: int) -> Dict:
   model_peers_data = ModelPeerData.list_from_vec_u8(result["result"])
 
   consensus_data = get_blockchain_peers_consensus_data(model_peers_data)
-  # print("get_consensus_data consensus_data", consensus_data)
 
   return consensus_data
 

@@ -191,11 +191,6 @@ def get_online_peers(dht: hivemind.DHT) -> List:
         logger.error(f"Error fetching online peers: {str(e)}")
 
 def get_online_peers_data(dht: hivemind.DHT) -> List:
-    print("get_online_peers_data")
-    # visible_maddrs = dht.get_visible_maddrs()
-    # visible_maddrs_str = [str(a) for a in dht.get_visible_maddrs(latest=True)]
-    # logger.info(f"visible_maddrs_str {visible_maddrs_str}")
-
     visible_maddrs_str = dht.initial_peers
     logger.info(f"visible_maddrs_str {visible_maddrs_str}")
 

@@ -34,8 +34,6 @@ class RemoteSequential(nn.Module):
         identity_path: Optional[str] = None,
         **kwargs,
     ):
-        print("RemoteSequential")
-        print("RemoteSequential identity_path", identity_path)
         super().__init__()
         self.config = config
 

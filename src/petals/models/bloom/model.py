@@ -224,15 +224,10 @@ class DistributedBloomModelValidator(FromPretrainedMixinValidator, PTuneMixinVal
         dht: Optional[hivemind.DHT] = None, 
         identity_path: Optional[Any] = None
     ):
-        print("DistributedBloomModelValidator __init__")
         n_layer, config.num_hidden_layers = config.num_hidden_layers, 0  # Prevent initialization
         super().__init__(config)
         assert len(self.h) == 0
         config.num_hidden_layers = n_layer
-
-        print("DistributedBloomModelValidator config", config)
-        print("DistributedBloomModelValidator dht", dht)
-        print("DistributedBloomModelValidator identity_path", identity_path)
 
         self.h = RemoteSequentialValidator(config, identity_path=identity_path)
 
@@ -311,7 +306,6 @@ class DistributedBloomModelValidator(FromPretrainedMixinValidator, PTuneMixinVal
 
 
 class DistributedBloomForCausalLMValidator(FromPretrainedMixinValidator, RemoteGenerationMixinValidator, BloomForCausalLM):
-    print("DistributedBloomForCausalLMValidator")
     _keys_to_ignore_on_load_missing = DistributedBloomModelValidator._keys_to_ignore_on_load_missing
     _keys_to_ignore_on_load_missing += [r"^lm_head\."]  # Missing since they are shared with input embeddings
     _keys_to_ignore_on_load_unexpected = DistributedBloomModelValidator._keys_to_ignore_on_load_unexpected
@@ -320,8 +314,6 @@ class DistributedBloomForCausalLMValidator(FromPretrainedMixinValidator, RemoteG
     config_class = DistributedBloomConfigValidator
 
     def __init__(self, config: DistributedBloomConfigValidator, identity_path: Optional[Any] = None):
-        print("DistributedBloomForCausalLMValidator config", config)
-        print("DistributedBloomForCausalLMValidator identity_path", identity_path)
         BloomPreTrainedModel.__init__(self, config)
         self.transformer = DistributedBloomModelValidator(config, identity_path=identity_path)
         self.lm_head = LMHeadValidator(config)

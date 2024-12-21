@@ -54,8 +54,6 @@ def validate_reachability(peer_id, wait_time: float = 7 * 60, retry_delay: float
 
 def check_direct_reachability(max_peers: int = 5, threshold: float = 0.5, **kwargs) -> Optional[bool]:
     """test if your peer is accessible by others in the swarm with the specified network options in **kwargs"""
-    print('check_direct_reachability kwargs', ', '.join(['{}={!r}'.format(k, v) for k, v in kwargs.items()]))
-
     async def _check_direct_reachability():
         target_dht = await DHTNode.create(client_mode=True, **kwargs)
         try:
@@ -63,8 +61,6 @@ def check_direct_reachability(max_peers: int = 5, threshold: float = 0.5, **kwar
             async with protocol.serve(target_dht.protocol.p2p):
                 successes = requests = 0
                 for remote_peer in list(target_dht.protocol.routing_table.peer_id_to_uid.keys()):
-                    print("check_direct_reachability target_dht.peer_id", target_dht.peer_id)
-                    print("check_direct_reachability remote_peer", remote_peer)
                     probe_available = await protocol.call_check(remote_peer=remote_peer, check_peer=target_dht.peer_id)
                     if probe_available is None:
                         continue  # remote peer failed to check probe

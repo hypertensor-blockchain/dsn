@@ -84,7 +84,6 @@ class RemoteSequenceManager:
         state: Optional[SequenceManagerState] = None,
         identity_path: Optional[str] = None
     ):
-        print("RemoteSequenceManager")
         if config.initial_peers or dht is None:
             try:
                 """
@@ -108,7 +107,6 @@ class RemoteSequenceManager:
             state = SequenceManagerState()
         self.state = state
 
-        print("RemoteSequenceManager identity_path", identity_path)
         if dht is None:
             """
             This uses Ed25519, if you're using another algorithm for generating Peer IDs, this may need to be updated

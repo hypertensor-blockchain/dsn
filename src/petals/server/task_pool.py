@@ -93,10 +93,6 @@ class PrioritizedTaskPool(threading.Thread):
         self.submitted_tasks.put(None)  # Shuts down self.run()
 
     def submit_task(self, *args: Any, priority: float = 0.0) -> MPFuture:
-        # print("submit_task")
-        # print("submit_task args", args)
-        # print("submit_task priority", priority)
-
         """Add task to this pool's queue, return Future for its output"""
         future = MPFuture()
         # Remove shmem from MPFuture. This disables the .cancel() feature but

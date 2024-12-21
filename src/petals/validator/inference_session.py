@@ -69,8 +69,6 @@ class _ServerInferenceSession:
         rpc_info: RPCInfo,
         **metadata,
     ) -> _ServerInferenceSession:
-        print("_ServerInferenceSession span.peer_id", span.peer_id)
-
         """Create a new session for a given remote module. This code is meant to be run inside RemoteExpertWorker"""
         stub = TransformerConnectionHandler.get_stub(p2p, span.peer_id)
         inputs_queue = asyncio.Queue()
@@ -191,7 +189,6 @@ class _ServerInferenceSession:
             raise Exception("Session is closed, cannot perform step")
 
         n_input_tokens = inputs.shape[1]
-        print("step_cache n_input_tokens", n_input_tokens)
 
         # assert (
         #     outputs[0].shape == inputs.shape
@@ -369,15 +366,7 @@ class InferenceSession:
                         self._update_sequence(server_idx, block_idx, attempt_no)
 
                     server_session = self._server_sessions[server_idx]
-
-                    # print("server_session server_idx", server_idx)
-                    # print("server_session.position", server_session.position)
-                    # print("self.position          ", self.position)
-                    # print("server_session.session_id          ", server_session.session_id)
-
                     
-                    # assert server_session.position == self.position, f"{server_session.position} and {self.position}"
-
                     # Get tensor history that matches the exact server_idx, start, and end
                     # currently works with only single spans, i.e. 1:2, 6:7, 9:10
                     cached_server_sessions = self.get_cached_server_sessions(
