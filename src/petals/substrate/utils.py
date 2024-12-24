@@ -4,7 +4,7 @@ Miscellaneous
 import pickle
 from typing import List, Dict
 from petals.substrate.chain_data import ModelPeerData
-from petals.substrate.chain_functions import get_model_peers_included, get_model_peers_submittable, get_submittables
+from petals.substrate.chain_functions import get_subnet_nodes_included, get_subnet_nodes_submittable, get_submittables
 from petals.substrate.config import PERCENTAGE_EPOCH_HEALTH_CONSENSUS_RECHECK
 from substrateinterface import SubstrateInterface
 from petals.health.state_updater import StateUpdaterThreadV2
@@ -169,7 +169,7 @@ def get_score(x: int, peers: int, blocks_per_layer: int, total_blocks: int) -> i
   return y
 
 def get_consensus_data(substrate: SubstrateInterface, subnet_id: int) -> Dict:
-  result = get_model_peers_included(
+  result = get_subnet_nodes_included(
     substrate,
     subnet_id
   )
@@ -188,10 +188,10 @@ def get_submittable_nodes(substrate: SubstrateInterface, subnet_id: int) -> List
 
   return result
 
-def get_blochchain_model_peers_submittable(substrate: SubstrateInterface, model_id: int) -> Dict:
-  result = get_model_peers_submittable(
+def get_blochchain_model_peers_submittable(substrate: SubstrateInterface, subnet_id: int) -> Dict:
+  result = get_subnet_nodes_submittable(
     substrate,
-    model_id
+    subnet_id
   )
 
   model_peers_data = ModelPeerData.list_from_vec_u8(result["result"])
@@ -279,17 +279,6 @@ def get_next_epoch_start_block(
 ) -> int:
   """Returns next start block for next epoch"""
   return epochs_length + (block - (block % epochs_length))
-
-# def should_check_model_health_after_consensus(
-#   block: int,
-#   epochs_interval: int, 
-# ) -> bool:
-#   latter_blocks_span = int(epochs_interval * PERCENTAGE_EPOCH_HEALTH_CONSENSUS_RECHECK)
-
-#   min_block = block - (block % epochs_interval) + epochs_interval - latter_blocks_span
-
-#   max_block = epochs_interval + block - (block % epochs_interval) - 1
-#   return start_block <= block and block <= max_block
 
 """Avoid querying the peers the block after submitting consensus, check the latter end of an epoch for model health"""
 def get_recheck_consensus_block(

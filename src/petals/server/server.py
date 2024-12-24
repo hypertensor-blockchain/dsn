@@ -1,3 +1,8 @@
+"""
+This is a bare server for testing purposes ony, do not use in production within Hypertensor
+This uses code that doesn't connect to the blockchain
+"""
+
 from __future__ import annotations
 
 import gc

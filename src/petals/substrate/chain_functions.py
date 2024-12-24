@@ -501,7 +501,7 @@ def register_subnet_node(
   # compose call
   call = substrate.compose_call(
     call_module='Network',
-    call_function='add_subnet_node',
+    call_function='register_subnet_node',
     call_params={
       'subnet_id': subnet_id,
       'peer_id': peer_id,
@@ -1058,16 +1058,16 @@ def get_accountants(substrate: SubstrateInterface, subnet_id: int):
 
   return make_query()
 
-def get_subnet_activated(substrate: SubstrateInterface, path: str):
-  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
-  def make_query():
-    try:
-      result = substrate.query('Network', 'SubnetActivated', [path])
-      return result
-    except SubstrateRequestException as e:
-      print("Failed to get rpc request: {}".format(e))
+# def get_subnet_activated(substrate: SubstrateInterface, path: str):
+#   @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+#   def make_query():
+#     try:
+#       result = substrate.query('Network', 'SubnetActivated', [path])
+#       return result
+#     except SubstrateRequestException as e:
+#       print("Failed to get rpc request: {}".format(e))
 
-  return make_query()
+#   return make_query()
 
 def get_epoch_length(substrate: SubstrateInterface):
   """

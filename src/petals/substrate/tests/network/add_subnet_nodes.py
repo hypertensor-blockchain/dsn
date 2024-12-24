@@ -1,5 +1,5 @@
 from substrateinterface import SubstrateInterface, Keypair
-from petals.substrate.chain_functions import add_subnet_node, get_model_path_id
+from petals.substrate.chain_functions import add_subnet_node, get_subnet_id_by_path
 from petals.substrate.tests.test_utils import PEER_IDS, get_substrate_config
 
 
@@ -10,7 +10,7 @@ This test requires a build with a subnet already initialized into the network pa
 def test_add_subnet_nodes(count: int):
   print("adding test subnet nodes")
   substrate_config = get_substrate_config(0)
-  subnet_id = get_model_path_id(
+  subnet_id = get_subnet_id_by_path(
     substrate_config.interface,
     "bigscience/bloom-560m"
   )

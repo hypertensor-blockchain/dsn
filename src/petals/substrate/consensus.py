@@ -2,7 +2,7 @@ from dataclasses import asdict, is_dataclass
 import threading
 import time
 from petals.substrate.chain_data import RewardsData
-from petals.substrate.chain_functions import attest, get_epoch_length, get_min_required_model_consensus_submit_epochs, get_model_activated, get_model_data, get_model_path_id, get_rewards_submission, get_rewards_validator, validate
+from petals.substrate.chain_functions import attest, get_epoch_length, get_min_required_subnet_consensus_submit_epochs, get_subnet_activated, get_subnet_data, get_subnet_id_by_path, get_rewards_submission, get_rewards_validator, validate
 from petals.substrate.config import BLOCK_SECS, SubstrateConfig
 from petals.substrate.utils import get_consensus_data, get_eligible_consensus_block, get_next_epoch_start_block, get_submittable_nodes
 from hivemind.utils import get_logger
@@ -30,12 +30,12 @@ class Consensus(threading.Thread):
     self.subnet_accepting_consensus = False
     self.subnet_node_eligible = False
     # block subnet is initialized
-    self.subnet_initialized = 9223372036854775807 # max int
+    self.subnet_activated = 9223372036854775807 # max int
     self.last_validated_or_attested_epoch = 0
 
     # blockchain constants
     self.epoch_length = int(str(get_epoch_length(SubstrateConfig.interface)))
-    self.min_required_model_consensus_submit_epochs = get_min_required_model_consensus_submit_epochs(SubstrateConfig.interface)
+    self.min_required_model_consensus_submit_epochs = get_min_required_subnet_consensus_submit_epochs(SubstrateConfig.interface)
 
     # delete pickles if exist
 
@@ -83,7 +83,7 @@ class Consensus(threading.Thread):
         """
         subnet_eligible_block = get_eligible_consensus_block(
           self.epoch_length, 
-          self.subnet_initialized, 
+          self.subnet_activated, 
           self.min_required_model_consensus_submit_epochs
         )
 
@@ -274,24 +274,17 @@ class Consensus(threading.Thread):
     Returns:
       bool: True if subnet was successfully activated, False otherwise.
     """
-    activated = get_model_activated(SubstrateConfig.interface, self.path)
+    subnet_id = get_subnet_id_by_path(SubstrateConfig.interface, self.path)
+    subnet_data = get_subnet_data(
+      SubstrateConfig.interface,
+      subnet_id
+    )
 
-    if activated['active'] == True:
+    if subnet_data['activated'] > 0:
       logger.info("Subnet activated, just getting things set up for consensus...")
       self.subnet_accepting_consensus = True
-      subnet_id = get_model_path_id(
-        SubstrateConfig.interface,
-        self.path
-      )
       self.subnet_id = int(str(subnet_id))
-
-      subnet_data = get_model_data(
-        SubstrateConfig.interface,
-        subnet_id
-      )
-
-      self.subnet_initialized = int(str(subnet_data["initialized"]))
-
+      self.subnet_activated = int(str(subnet_data["activated"]))
       return True
     else:
       return False
