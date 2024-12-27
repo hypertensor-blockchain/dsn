@@ -16,7 +16,7 @@ signal(SIGPIPE,SIG_DFL)
 This test requires a build with a subnet already initialized into the network pallet
 """
 import threading
-from petals.substrate.chain_functions import get_submittables, get_min_required_subnet_consensus_submit_epochs, get_subnet_id_by_path, attest, get_epoch_length, get_subnet_activated, get_subnet_data, get_subnet_id_by_path, get_rewards_submission, get_rewards_validator, validate
+from petals.substrate.chain_functions import get_submittables, get_min_required_subnet_consensus_submit_epochs, get_subnet_id_by_path, attest, get_epoch_length, get_subnet_data, get_subnet_id_by_path, get_rewards_submission, get_rewards_validator, validate
 
 from hivemind.utils import get_logger
 
@@ -378,7 +378,7 @@ def test_validate(count: int):
 
   # add subnet nodes
   print("test_validate adding subnet nodes")
-  test_add_subnet_nodes(count)
+  test_add_subnet_nodes(count, MODEL_PATH)
 
   processes = []
   for n in range(count):

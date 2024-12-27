@@ -2,7 +2,7 @@ import argparse
 
 from hivemind.utils.logging import get_logger
 
-from petals.substrate.chain_functions import register_subnet
+from petals.substrate.chain_functions import get_max_subnet_registration_blocks, get_min_subnet_registration_blocks, register_subnet
 from petals.substrate.config import SubstrateConfig
 
 logger = get_logger(__name__)
@@ -20,6 +20,12 @@ def main():
     path = args.path
     memory_mb = args.memory_mb
     registration_blocks = args.registration_blocks
+
+    min_registration_blocks = get_min_subnet_registration_blocks(SubstrateConfig.interface)
+    assert registration_blocks >= min_registration_blocks, f"Registration blocks must be >= {min_registration_blocks}. "
+
+    max_registration_blocks = get_max_subnet_registration_blocks(SubstrateConfig.interface)
+    assert registration_blocks <= max_registration_blocks, f"Registration blocks must be <= {max_registration_blocks}. "
 
     try:
         receipt = register_subnet(

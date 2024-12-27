@@ -431,6 +431,56 @@ def is_subnet_node_by_peer_id(
 
   return make_rpc_request()
 
+def get_minimum_subnet_nodes(
+  substrate: SubstrateInterface,
+  memory_mb: int,
+):
+  """
+  Function to return all account_ids and subnet_node_ids from the substrate Hypertensor Blockchain
+
+  :param SubstrateInterface: substrate interface from blockchain url
+  :returns: subnet_nodes_data
+  """
+  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+  def make_rpc_request():
+    try:
+      subnet_nodes_data = substrate.rpc_request(
+        method='network_getMinimumSubnetNodes',
+        params=[
+          memory_mb
+        ]
+      )
+      return subnet_nodes_data
+    except SubstrateRequestException as e:
+      print("Failed to get rpc request: {}".format(e))
+
+  return make_rpc_request()
+
+def get_minimum_delegate_stake(
+  substrate: SubstrateInterface,
+  memory_mb: int,
+):
+  """
+  Function to return all account_ids and subnet_node_ids from the substrate Hypertensor Blockchain
+
+  :param SubstrateInterface: substrate interface from blockchain url
+  :returns: subnet_nodes_data
+  """
+  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+  def make_rpc_request():
+    try:
+      subnet_nodes_data = substrate.rpc_request(
+        method='network_getMinimumDelegateStake',
+        params=[
+          memory_mb
+        ]
+      )
+      return subnet_nodes_data
+    except SubstrateRequestException as e:
+      print("Failed to get rpc request: {}".format(e))
+
+  return make_rpc_request()
+
 def add_subnet_node(
   substrate: SubstrateInterface,
   keypair: Keypair,
@@ -715,6 +765,49 @@ def remove_stake(
     call_params={
       'subnet_id': subnet_id,
       'stake_to_be_removed': stake_to_be_removed,
+    }
+  )
+
+  # create signed extrinsic
+  extrinsic = substrate.create_signed_extrinsic(call=call, keypair=keypair)
+
+  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+  def submit_extrinsic():
+    try:
+      receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
+      if receipt.is_success:
+        print('✅ Success, triggered events:')
+        for event in receipt.triggered_events:
+          print(f'* {event.value}')
+      else:
+        print('⚠️ Extrinsic Failed: ', receipt.error_message)
+      return receipt
+    except SubstrateRequestException as e:
+      print("Failed to send: {}".format(e))
+
+  return submit_extrinsic()
+
+def add_to_delegate_stake(
+  substrate: SubstrateInterface,
+  keypair: Keypair,
+  subnet_id: int,
+  stake_to_be_added: int,
+):
+  """
+  Add subnet validator as subnet subnet_node to blockchain storage
+
+  :param substrate: interface to blockchain
+  :param keypair: keypair of extrinsic caller. Must be a subnet_node in the subnet
+  :param stake_to_be_added: stake to be added towards subnet
+  """
+
+  # compose call
+  call = substrate.compose_call(
+    call_module='Network',
+    call_function='add_to_delegate_stake',
+    call_params={
+      'subnet_id': subnet_id,
+      'stake_to_be_added': stake_to_be_added,
     }
   )
 
@@ -1130,3 +1223,43 @@ def get_rewards_submission(
       print("Failed to get rpc request: {}".format(e))
 
   return make_query()
+
+def get_min_subnet_registration_blocks(substrate: SubstrateInterface):
+  """
+  Function to get the consensus blocks interval
+
+  :param SubstrateInterface: substrate interface from blockchain url
+  :returns: epoch_length
+  """
+
+  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+  def make_query():
+    try:
+      result = substrate.query('Network', 'MinSubnetRegistrationBlocks')
+      return result
+    except SubstrateRequestException as e:
+      print("Failed to get rpc request: {}".format(e))
+
+  return make_query()
+
+def get_max_subnet_registration_blocks(substrate: SubstrateInterface):
+  """
+  Function to get the consensus blocks interval
+
+  :param SubstrateInterface: substrate interface from blockchain url
+  :returns: epoch_length
+  """
+
+  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+  def make_query():
+    try:
+      result = substrate.query('Network', 'MaxSubnetRegistrationBlocks')
+      return result
+    except SubstrateRequestException as e:
+      print("Failed to get rpc request: {}".format(e))
+
+  return make_query()
+
+
+
+
