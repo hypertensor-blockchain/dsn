@@ -186,7 +186,7 @@ def get_submittable_nodes(substrate: SubstrateInterface, subnet_id: int) -> List
     subnet_id,
   )
 
-  print("get_submittable_nodes", result["result"])
+  # print("get_submittable_nodes", result["result"])
 
   subnet_nodes = SubnetNode.list_from_vec_u8(result["result"])
 

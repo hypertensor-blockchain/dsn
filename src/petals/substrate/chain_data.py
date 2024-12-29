@@ -1,13 +1,18 @@
+"""
+Originally taken from: https://github.com/opentensor/bittensor/blob/master/bittensor/core/chain_data/utils.py
+Licence: MIT
+Author: Yuma Rao
+"""
+
 import ast
 from enum import Enum
 import json
 import scalecodec
 from dataclasses import dataclass
 from scalecodec.base import RuntimeConfiguration, ScaleBytes
-from typing import List, Dict, Optional, Any, TypedDict, Union
+from typing import List, Dict, Optional, Any, Union
 from scalecodec.type_registry import load_type_registry_preset
 from scalecodec.utils.ss58 import ss58_encode
-from scalecodec.types import Vec
 from hivemind import PeerID
 
 U16_MAX = 65535

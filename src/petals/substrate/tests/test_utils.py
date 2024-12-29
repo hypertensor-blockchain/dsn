@@ -32,7 +32,15 @@ PEER_IDS = [
   "12D3KooWBxMLje7yExEBhZQqbuVL1giKPpN8DieYkL3Wz7sTku7T",
   "12D3KooWEDYmpQVW6ixD7MijciZcZMuPtdrvNbeC4Jr1cxV1hJZe",
   "12D3KooWJAAqbBW3YXJE42TAGgXTRVxZwmWuqY9yBneLfsDFiA8b",
-  "12D3KooWGB94YYemuff4AucWo8RfV5mzHWLZc5HvhWqBXrk2W8YN"
+  "12D3KooWGB94YYemuff4AucWo8RfV5mzHWLZc5HvhWqBXrk2W8YN",
+  "12D3KooWGB94YYemuff4AucWo8RfV5mzHWLZc5HvhWqBXrk2W8YL",
+  "12D3KooWGB94YYemuff4AucWo8RfV5mzHWLZc5HvhWqBXrk2W8YP",
+  "12D3KooWGB94YYemuff4AucWo8RfV5mzHWLZc5HvhWqBXrk2W8YQ",
+  "12D3KooWGB94YYemuff4AucWo8RfV5mzHWLZc5HvhWqBXrk2W8Y1",
+  "12D3KooWGB94YYemuff4AucWo8RfV5mzHWLZc5HvhWqBXrk2W8Y2",
+  "12D3KooWGB94YYemuff4AucWo8RfV5mzHWLZc5HvhWqBXrk2W8Y3",
+  "12D3KooWGB94YYemuff4AucWo8RfV5mzHWLZc5HvhWqBXrk2W8Y4",
+  "12D3KooWGB94YYemuff4AucWo8RfV5mzHWLZc5HvhWqBXrk2W8Y5",
 ] 
 
 @dataclasses.dataclass
@@ -140,7 +148,7 @@ class TestConsensus(threading.Thread):
           print("submittable_nodes: \n", submittable_nodes)
 
           for node_set in submittable_nodes:
-            if node_set[0] == self.account_id:
+            if node_set.account_id == self.account_id:
               self.subnet_node_eligible = True
               break
           
@@ -217,34 +225,52 @@ class TestConsensus(threading.Thread):
   def attest(self, epoch: int):
     print("attest")
     """Get rewards data from another validator and attest that data if valid"""
-    validator_consensus_data = self._get_validator_consensus_submission(epoch)
+    validator_consensus_submission = self._get_validator_consensus_submission(epoch)
 
-    if validator_consensus_data == None:
+    if validator_consensus_submission == None:
       logger.info("Waiting for validator to submit")
       return None
 
-    validator_consensus_data = RewardsData.list_from_scale_info(validator_consensus_data["data"])
+    # backup check if validator node restarts in the middle of an epoch to ensure they don't tx again
+    if self._has_attested(validator_consensus_submission["attests"]):
+      logger.info("Has attested already")
+      return None
 
-    valid = True
+    validator_consensus_data = RewardsData.list_from_scale_info(validator_consensus_submission["data"])
 
     logger.info("Checking if we should attest the validators submission")
-
-
-    """
-    """
-    # Simply validate to ensure mechanism compatibility
-
     logger.info("Generating consensus data")
     consensus_data = self._get_consensus_data()
     should_attest = self.should_attest(validator_consensus_data, consensus_data)
     logger.info("Should attest is: %s", should_attest)
 
-    if valid:
+    if should_attest:
       logger.info("Validators data is confirmed valid, attesting data...")
       return self._do_attest()
     else:
       logger.info("Validators data is not valid, skipping attestation.")
       return None
+
+    # valid = True
+
+    # logger.info("Checking if we should attest the validators submission")
+
+
+    # """
+    # """
+    # # Simply validate to ensure mechanism compatibility
+
+    # logger.info("Generating consensus data")
+    # consensus_data = self._get_consensus_data()
+    # should_attest = self.should_attest(validator_consensus_data, consensus_data)
+    # logger.info("Should attest is: %s", should_attest)
+
+    # if valid:
+    #   logger.info("Validators data is confirmed valid, attesting data...")
+    #   return self._do_attest()
+    # else:
+    #   logger.info("Validators data is not valid, skipping attestation.")
+    #   return None
     
   def _do_validate(self, data):
     print("_do_validate")
@@ -326,18 +352,24 @@ class TestConsensus(threading.Thread):
 
   def should_attest(self, validator_data, my_data):
     print("should_attest")
+    print("should_attest validator_data", validator_data)
+    print("should_attest my_data", my_data)
     """Checks if two arrays of dictionaries match, regardless of order."""
 
-    if len(validator_data) != len(my_data) or len(validator_data) > 0:
+    # if data length differs and validator did upload data, return False
+    # this means the validator thinks the subnet is broken, but we do not
+    if len(validator_data) != len(my_data) and len(validator_data) > 0:
       return False
 
+    # otherwise, check the data matches
+
     # use ``asdict`` because data is decoded from blockchain as dataclass
-    if is_dataclass(validator_data[0]):
+    if is_dataclass(validator_data):
       set1 = set(frozenset(asdict(d).items()) for d in validator_data)
     else:
       set1 = set(frozenset(d.items()) for d in validator_data)
 
-    if is_dataclass(my_data[0]):
+    if is_dataclass(my_data):
       set2 = set(frozenset(asdict(d).items()) for d in my_data)
     else:
       set2 = set(frozenset(d.items()) for d in my_data)
