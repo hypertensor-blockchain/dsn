@@ -3,8 +3,8 @@ Miscellaneous
 """
 import pickle
 from typing import List, Dict
-from petals.substrate.chain_data import ModelPeerData
-from petals.substrate.chain_functions import get_subnet_nodes_included, get_subnet_nodes_submittable, get_submittables
+from petals.substrate.chain_data import SubnetNode
+from petals.substrate.chain_functions import get_subnet_nodes_included, get_subnet_nodes_submittable
 from petals.substrate.config import PERCENTAGE_EPOCH_HEALTH_CONSENSUS_RECHECK
 from substrateinterface import SubstrateInterface
 from petals.health.state_updater import StateUpdaterThreadV2
@@ -174,19 +174,23 @@ def get_consensus_data(substrate: SubstrateInterface, subnet_id: int) -> Dict:
     subnet_id
   )
 
-  model_peers_data = ModelPeerData.list_from_vec_u8(result["result"])
+  model_peers_data = SubnetNode.list_from_vec_u8(result["result"])
 
   consensus_data = get_blockchain_peers_consensus_data(model_peers_data)
 
   return consensus_data
 
 def get_submittable_nodes(substrate: SubstrateInterface, subnet_id: int) -> List:
-  result = get_submittables(
+  result = get_subnet_nodes_submittable(
     substrate,
-    subnet_id
+    subnet_id,
   )
 
-  return result
+  print("get_submittable_nodes", result["result"])
+
+  subnet_nodes = SubnetNode.list_from_vec_u8(result["result"])
+
+  return subnet_nodes
 
 def get_blochchain_model_peers_submittable(substrate: SubstrateInterface, subnet_id: int) -> Dict:
   result = get_subnet_nodes_submittable(
@@ -194,7 +198,7 @@ def get_blochchain_model_peers_submittable(substrate: SubstrateInterface, subnet
     subnet_id
   )
 
-  model_peers_data = ModelPeerData.list_from_vec_u8(result["result"])
+  model_peers_data = SubnetNode.list_from_vec_u8(result["result"])
 
   return model_peers_data
 

@@ -267,9 +267,9 @@ class Consensus(threading.Thread):
   
   def _activate_subnet(self):
     """
-    Attempt to activate subnet
+    Attempt to activate subnet within the subnet
 
-    Will wait for subnet to be voted in
+    Waits for subnet to be activated on-chain
 
     Returns:
       bool: True if subnet was successfully activated, False otherwise.

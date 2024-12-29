@@ -7,6 +7,9 @@ from petals.substrate.config import SubstrateConfig
 
 logger = get_logger(__name__)
 
+"""
+python -m petals.cli.hypertensor.subnet_node.deactivate --subnet_id 1
+"""
 
 def main():
     # fmt:off

@@ -21,7 +21,8 @@ def sim_activated_subnet(path: str, memory_mb: int):
     substrate_config.interface,
     memory_mb,
   )
-  test_add_subnet_nodes(minimum_subnet_nodes['result'], path)
+  minimum_subnet_nodes = minimum_subnet_nodes['result']
+  test_add_subnet_nodes(minimum_subnet_nodes, path)
 
   # add delegate stake balance
   subnet_id = get_subnet_id_by_path(
@@ -41,6 +42,7 @@ def sim_activated_subnet(path: str, memory_mb: int):
   initialized = int(str(subnet_data['initialized']))
   registration_blocks = int(str(subnet_data['registration_blocks']))
   activation_block = initialized + registration_blocks
+  print("activating subnet activation_block", activation_block)
 
   # activate
   print("activating subnet")
@@ -54,6 +56,8 @@ def sim_activated_subnet(path: str, memory_mb: int):
       receipt = test_activate_subnet(subnet_id)
       print(receipt)
       break
+
+  return subnet_id, minimum_subnet_nodes
 
 
 

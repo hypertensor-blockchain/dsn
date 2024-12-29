@@ -481,6 +481,31 @@ def get_minimum_delegate_stake(
 
   return make_rpc_request()
 
+def get_subnet_node_info(
+  substrate: SubstrateInterface,
+  subnet_id: int,
+):
+  """
+  Function to return all account_ids and subnet_node_ids from the substrate Hypertensor Blockchain
+
+  :param SubstrateInterface: substrate interface from blockchain url
+  :returns: subnet_nodes_data
+  """
+  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+  def make_rpc_request():
+    try:
+      subnet_nodes_data = substrate.rpc_request(
+        method='network_getSubnetNodeInfo',
+        params=[
+          subnet_id
+        ]
+      )
+      return subnet_nodes_data
+    except SubstrateRequestException as e:
+      print("Failed to get rpc request: {}".format(e))
+
+  return make_rpc_request()
+
 def add_subnet_node(
   substrate: SubstrateInterface,
   keypair: Keypair,
@@ -1077,74 +1102,6 @@ def get_min_required_subnet_consensus_submit_epochs(substrate: SubstrateInterfac
   def make_query():
     try:
       result = substrate.query('Network', 'MinRequiredSubnetConsensusSubmitEpochs')
-      return result
-    except SubstrateRequestException as e:
-      print("Failed to get rpc request: {}".format(e))
-
-  return make_query()
-
-def get_idles(substrate: SubstrateInterface, subnet_id: int):
-  """
-  Get list of all accounts eligible for consensus inclusion
-
-  :param SubstrateInterface: substrate interface from blockchain url
-  """
-
-  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
-  def make_query():
-    try:
-      result = substrate.query('Network', 'SubnetNodesClasses', [subnet_id, 'Idle'])
-      return result
-    except SubstrateRequestException as e:
-      print("Failed to get rpc request: {}".format(e))
-
-  return make_query()
-
-def get_included(substrate: SubstrateInterface, subnet_id: int):
-  """
-  Get list of all accounts eligible for consensus inclusion
-
-  :param SubstrateInterface: substrate interface from blockchain url
-  """
-
-  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
-  def make_query():
-    try:
-      result = substrate.query('Network', 'SubnetNodesClasses', [subnet_id, 'Included'])
-      return result
-    except SubstrateRequestException as e:
-      print("Failed to get rpc request: {}".format(e))
-
-  return make_query()
-
-def get_submittables(substrate: SubstrateInterface, subnet_id: int):
-  """
-  Get list of all accounts eligible for consensus submissions
-
-  :param SubstrateInterface: substrate interface from blockchain url
-  """
-
-  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
-  def make_query():
-    try:
-      result = substrate.query('Network', 'SubnetNodesClasses', [subnet_id, 'Submittable'])
-      return result
-    except SubstrateRequestException as e:
-      print("Failed to get rpc request: {}".format(e))
-
-  return make_query()
-
-def get_accountants(substrate: SubstrateInterface, subnet_id: int):
-  """
-  Get list of all accounts eligible for accountant submissions
-
-  :param SubstrateInterface: substrate interface from blockchain url
-  """
-
-  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
-  def make_query():
-    try:
-      result = substrate.query('Network', 'SubnetNodesClasses', [subnet_id, 'Accountant'])
       return result
     except SubstrateRequestException as e:
       print("Failed to get rpc request: {}".format(e))

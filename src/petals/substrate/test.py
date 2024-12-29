@@ -24,7 +24,7 @@ from config import NetworkConfig, SubstrateConfig
 
 from typing import List, Dict, Union, Optional, Tuple, TypedDict, Any, TypeVar
 
-from chain_data import ModelPeerData
+from chain_data import SubnetNode
 from petals.constants import PUBLIC_INITIAL_PEERS
 from utils import get_consensus_data, get_consensus_data_test
 

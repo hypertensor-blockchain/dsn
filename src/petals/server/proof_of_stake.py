@@ -2,7 +2,7 @@ import os
 import threading
 from venv import logger
 
-from petals.substrate.chain_data import ModelPeerData
+from petals.substrate.chain_data import SubnetNode
 from petals.substrate.chain_functions import is_subnet_node_by_peer_id
 from petals.substrate.config import BLOCK_SECS, SubstrateConfig
 from petals.substrate.consensus import Consensus

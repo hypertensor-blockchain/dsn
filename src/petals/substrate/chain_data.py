@@ -4,9 +4,10 @@ import json
 import scalecodec
 from dataclasses import dataclass
 from scalecodec.base import RuntimeConfiguration, ScaleBytes
-from typing import List, Tuple, Dict, Optional, Any, TypedDict, Union
+from typing import List, Dict, Optional, Any, TypedDict, Union
 from scalecodec.type_registry import load_type_registry_preset
 from scalecodec.utils.ss58 import ss58_encode
+from scalecodec.types import Vec
 from hivemind import PeerID
 
 U16_MAX = 65535
@@ -20,61 +21,74 @@ def U64_NORMALIZED_FLOAT(x: int) -> float:
 
 custom_rpc_type_registry = {
   "types": {
-    "ModelPeerData": {
+    "SubnetNode": {
       "type": "struct",
       "type_mapping": [
-          ["account_id", "AccountId"],
-          ["peer_id", "Vec<u8>"],
-          ["ip", "Vec<u8>"],
-          ["port", "u16"],
-          ["initialized", "u64"],
+        ["account_id", "AccountId"],
+        ["hotkey", "AccountId"],
+        ["peer_id", "Vec<u8>"],
+        ["initialized", "u64"],
+        ["classification", "SubnetNodeClassification"],
+        ["a", "Vec<u8>"],
+        ["b", "Vec<u8>"],
+        ["c", "Vec<u8>"],
+      ],
+    },
+    "SubnetNode": {
+      "type": "struct",
+      "type_mapping": [
+        ["account_id", "AccountId"],
+        ["hotkey", "AccountId"],
+        ["peer_id", "Vec<u8>"],
+        ["initialized", "u64"],
+        ["classification", "SubnetNodeClassification"],
+        ["a", "Vec<u8>"],
+        ["b", "Vec<u8>"],
+        ["c", "Vec<u8>"],
+      ],
+    },
+    "SubnetNodeClassification": {
+      "type": "struct",
+      "type_mapping": [
+        ["class", "SubnetNodeClass"],
+        ["start_epoch", "u64"],
+      ],
+    },
+    "SubnetNodeClass": {
+      "type": "enum",
+      "value_list": [
+        "Registered", 
+        "Idle", 
+        "Included", 
+        "Submittable", 
+        "Accountant"
       ],
     },
     "RewardsData": {
       "type": "struct",
       "type_mapping": [
-          ["peer_id", "Vec<u8>"],
-          ["score", "u128"],
+        ["peer_id", "Vec<u8>"],
+        ["score", "u128"],
+      ],
+    },
+    "SubnetNodeInfo": {
+      "type": "struct",
+      "type_mapping": [
+        ["account_id", "AccountId"],
+        ["hotkey", "AccountId"],
+        ["peer_id", "Vec<u8>"],
       ],
     },
   }
 }
 
-class ParamWithTypes(TypedDict):
-  """
-  TypedDict for a parameter with its types.
-  """
-  name: str  # Name of the parameter.
-  type: str  # ScaleType string of the parameter.
-
-def _encode_params(
-  self,
-  call_definition: List[ParamWithTypes],
-  params: Union[List[Any], Dict[str, Any]],
-) -> str:
-  """
-  Returns a hex encoded string of the params using their types.
-  """
-  param_data = ScaleBytes(b"")
-
-  for i, param in enumerate(call_definition["params"]):  # type: ignore
-    scale_obj = self.substrate.create_scale_object(param["type"])
-    if type(params) is list:
-      param_data += scale_obj.encode(params[i])
-    else:
-      if param["name"] not in params:
-          raise ValueError(f"Missing param {param['name']} in params dict.")
-
-      param_data += scale_obj.encode(params[param["name"]])
-
-  return param_data.to_hex()
-
 class ChainDataType(Enum):
   """
   Enum for chain data types.
   """
-  ModelPeerData = 1
+  SubnetNode = 1
   RewardsData = 2
+  SubnetNodeInfo = 3
 
 def from_scale_encoding(
     input: Union[List[int], bytes, ScaleBytes],
@@ -82,6 +96,11 @@ def from_scale_encoding(
     is_vec: bool = False,
     is_option: bool = False,
 ) -> Optional[Dict]:
+    print("from_scale_encoding input", input)
+    print("from_scale_encoding type_name", type_name)
+    print("from_scale_encoding is_vec", is_vec)
+    print("from_scale_encoding is_option", is_option)
+
     """
     Returns the decoded data from the SCALE encoded input.
 
@@ -96,9 +115,6 @@ def from_scale_encoding(
     """
     
     type_string = type_name.name
-    # if type_name == ChainDataType.DelegatedInfo:
-      # DelegatedInfo is a tuple of (DelegateInfo, Compact<u64>)
-      # type_string = f"({ChainDataType.DelegateInfo.name}, Compact<u64>)"
     if is_option:
       type_string = f"Option<{type_string}>"
     if is_vec:
@@ -119,7 +135,6 @@ def from_scale_encoding_using_type_string(
   Returns:
     Optional[Dict]: The decoded data
   """
-  
   if isinstance(input, ScaleBytes):
     as_scale_bytes = input
   else:
@@ -138,102 +153,9 @@ def from_scale_encoding_using_type_string(
   rpc_runtime_config.update_type_registry(custom_rpc_type_registry)
 
   obj = rpc_runtime_config.create_scale_object(type_string, data=as_scale_bytes)
+  print("from_scale_encoding_using_type_string obj", obj)
 
   return obj.decode()
-
-# Dataclasses for chain data.
-@dataclass
-class ModelPeerData:
-  """
-  Dataclass for model peer metadata.
-  """
-
-  account_id: str
-  peer_id: str
-  ip: str
-  port: int
-  initialized: int
-
-  @classmethod
-  def fix_decoded_values(cls, model_peer_data_decoded: Any) -> "ModelPeerData":
-    """Fixes the values of the ModelPeerData object."""
-    model_peer_data_decoded["account_id"] = ss58_encode(
-      model_peer_data_decoded["account_id"], 42
-    )
-    model_peer_data_decoded["peer_id"] = model_peer_data_decoded["peer_id"]
-    model_peer_data_decoded["ip"] = model_peer_data_decoded["ip"]
-    model_peer_data_decoded["port"] = model_peer_data_decoded["port"]
-    model_peer_data_decoded["initialized"] = model_peer_data_decoded["initialized"]
-
-    return cls(**model_peer_data_decoded)
-
-  @classmethod
-  def from_vec_u8(cls, vec_u8: List[int]) -> "ModelPeerData":
-    """Returns a ModelPeerData object from a ``vec_u8``."""
-
-    if len(vec_u8) == 0:
-      return ModelPeerData._null_model_peer_data()
-
-    decoded = from_scale_encoding(vec_u8, ChainDataType.ModelPeerData)
-
-    if decoded is None:
-      return ModelPeerData._null_model_peer_data()
-
-    decoded = ModelPeerData.fix_decoded_values(decoded)
-
-    return decoded
-
-  @classmethod
-  def list_from_vec_u8(cls, vec_u8: List[int]) -> List["ModelPeerData"]:
-    """Returns a list of ModelPeerData objects from a ``vec_u8``."""
-
-    decoded_list = from_scale_encoding(
-      vec_u8, ChainDataType.ModelPeerData, is_vec=True
-    )
-    if decoded_list is None:
-      return []
-
-    decoded_list = [
-      ModelPeerData.fix_decoded_values(decoded) for decoded in decoded_list
-    ]
-    return decoded_list
-
-  @staticmethod
-  def _null_model_peer_data() -> "ModelPeerData":
-    """
-    Returns a ModelPeerData object with null values.
-    """
-
-    model_peer_data = ModelPeerData(
-      account_id="000000000000000000000000000000000000000000000000",
-      peer_id=0,
-      ip=0,
-      port=0,
-      initialized=0,
-    )
-    return model_peer_data
-
-  @staticmethod
-  def _model_peer_data_to_namespace(model_peer_data) -> "ModelPeerData":
-    """
-    Converts a ModelPeerData object to a namespace.
-
-    Args:
-      model_peer_data (ModelPeerData): The ModelPeerData object.
-
-    Returns:
-      ModelPeerData: The ModelPeerData object.
-    """
-
-    # TODO: Legacy: remove?
-    if model_peer_data["account_id"] == "5C4hrfjw9DjXZTzV3MwzrrAr9P1MJhSrvWGWqi1eSuyUpnhM":
-      return ModelPeerData._null_model_peer_data()
-    else:
-      neuron = ModelPeerData(**model_peer_data)
-
-      return neuron
-
-###
 
 # Dataclasses for chain data.
 @dataclass
@@ -284,33 +206,6 @@ class AccountantDataParams:
     return decoded_list
 
 @dataclass
-class AccountIdList:
-  """
-  Dataclass for AccountId lists
-  """
-  @classmethod
-  def list_from_vec_u8(cls, vec_u8: List[int]) -> List["AccountIdList"]:
-    """Returns a list of AccountIdList objects from a ``vec_u8``."""
-    """The data is arbitrary so we don't count on a struct"""
-
-    decoded_list: List[AccountIdList] = []
-
-    # Convert arbitrary data to str
-    list_of_ord_values = ''.join(chr(i) for i in vec_u8)
-
-    # Replace ' to " for json
-    list_of_ord_values = list_of_ord_values.replace("\'", "\"")
-
-    json_obj = json.loads(list_of_ord_values)
-
-    for x in json_obj:
-      accountant_data_params = AccountIdList(*x)
-      decoded_list.append(accountant_data_params)
-
-    return decoded_list
-  
-
-@dataclass
 class RewardsData:
   """
   Dataclass for model peer metadata.
@@ -332,12 +227,12 @@ class RewardsData:
     """Returns a RewardsData object from a ``vec_u8``."""
 
     if len(vec_u8) == 0:
-      return RewardsData._null_model_peer_data()
+      return RewardsData._null_subnet_node_data()
 
     decoded = from_scale_encoding(vec_u8, ChainDataType.RewardsData)
 
     if decoded is None:
-      return RewardsData._null_model_peer_data()
+      return RewardsData._null_subnet_node_data()
 
     decoded = RewardsData.fix_decoded_values(decoded)
 
@@ -371,19 +266,8 @@ class RewardsData:
 
     json_data = ast.literal_eval(json.dumps(decoded))
 
-    res = eval(json_data)
-
-    # decoded_list = from_scale_encoding(
-    #   encoded_list, ChainDataType.RewardsData, is_vec=True
-    # )
-
     decoded_list = []
     for item in scale_info:
-      # RewardsData.peer_id = item
-      # data = {
-      #   'peer_id': item["peer_id"],
-      #   'score': item["score"],
-      # }
       decoded_list.append(
         RewardsData(
           peer_id=str(item["peer_id"]),
@@ -404,6 +288,134 @@ class RewardsData:
     Returns:
       RewardsData: The RewardsData object.
     """
-    neuron = RewardsData(**rewards_data)
+    data = RewardsData(**rewards_data)
 
-    return neuron
+    return data
+
+@dataclass
+class SubnetNodeInfo:
+  """
+  Dataclass for model peer metadata.
+  """
+
+  account_id: str
+  hotkey: str
+  peer_id: str
+
+  @classmethod
+  def fix_decoded_values(cls, data_decoded: Any) -> "SubnetNodeInfo":
+    """Fixes the values of the RewardsData object."""
+    data_decoded["account_id"] = ss58_encode(
+      data_decoded["account_id"], 42
+    )
+    data_decoded["hotkey"] = data_decoded["hotkey"]
+    data_decoded["peer_id"] = data_decoded["peer_id"]
+
+    return cls(**data_decoded)
+
+  @classmethod
+  def from_vec_u8(cls, vec_u8: List[int]) -> "SubnetNodeInfo":
+    """Returns a SubnetNodeInfo object from a ``vec_u8``."""
+
+    if len(vec_u8) == 0:
+      return SubnetNodeInfo._null_subnet_node_data()
+
+    decoded = from_scale_encoding(vec_u8, ChainDataType.SubnetNodeInfo)
+
+    if decoded is None:
+      return SubnetNodeInfo._null_subnet_node_data()
+
+    decoded = SubnetNodeInfo.fix_decoded_values(decoded)
+
+    return decoded
+
+  @classmethod
+  def list_from_vec_u8(cls, vec_u8: List[int]) -> List["SubnetNodeInfo"]:
+    """Returns a list of SubnetNodeInfo objects from a ``vec_u8``."""
+
+    decoded_list = from_scale_encoding(
+      vec_u8, ChainDataType.SubnetNodeInfo, is_vec=True
+    )
+    if decoded_list is None:
+      return []
+
+    decoded_list = [
+      SubnetNodeInfo.fix_decoded_values(decoded) for decoded in decoded_list
+    ]
+    return decoded_list
+
+  @staticmethod
+  def _subnet_node_info_to_namespace(data) -> "SubnetNodeInfo":
+    """
+    Converts a SubnetNodeInfo object to a namespace.
+
+    Args:
+      rewards_data (SubnetNodeInfo): The SubnetNodeInfo object.
+
+    Returns:
+      SubnetNodeInfo: The SubnetNodeInfo object.
+    """
+    data = SubnetNodeInfo(**data)
+
+    return data
+
+@dataclass
+class SubnetNode:
+  """
+  Dataclass for model peer metadata.
+  """
+
+  account_id: str
+  hotkey: str
+  peer_id: str
+  initialized: int
+  classification: str
+  a: str
+  b: str
+  c: str
+
+  @classmethod
+  def fix_decoded_values(cls, data_decoded: Any) -> "SubnetNode":
+    """Fixes the values of the RewardsData object."""
+    data_decoded["account_id"] = ss58_encode(
+      data_decoded["account_id"], 42
+    )
+    data_decoded["hotkey"] = data_decoded["hotkey"]
+    data_decoded["peer_id"] = data_decoded["peer_id"]
+    data_decoded["initialized"] = data_decoded["initialized"]
+    data_decoded["classification"] = data_decoded["classification"]
+    data_decoded["a"] = data_decoded["a"]
+    data_decoded["b"] = data_decoded["b"]
+    data_decoded["c"] = data_decoded["c"]
+
+    return cls(**data_decoded)
+
+  @classmethod
+  def list_from_vec_u8(cls, vec_u8: List[int]) -> List["SubnetNode"]:
+    """Returns a list of SubnetNode objects from a ``vec_u8``."""
+
+    decoded_list = from_scale_encoding(
+      vec_u8, ChainDataType.SubnetNode, is_vec=True
+    )
+    if decoded_list is None:
+      return []
+
+    decoded_list = [
+      SubnetNode.fix_decoded_values(decoded) for decoded in decoded_list
+    ]
+    return decoded_list
+
+  @staticmethod
+  def _subnet_node_info_to_namespace(data) -> "SubnetNode":
+    """
+    Converts a SubnetNode object to a namespace.
+
+    Args:
+      rewards_data (SubnetNode): The SubnetNode object.
+
+    Returns:
+      SubnetNode: The SubnetNode object.
+    """
+    data = SubnetNodeInfo(**data)
+
+    return data
