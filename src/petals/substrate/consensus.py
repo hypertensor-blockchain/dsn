@@ -289,22 +289,51 @@ class Consensus(threading.Thread):
     else:
       return False
 
+  # def should_attest(self, validator_data, my_data):
+  #   """Checks if two arrays of dictionaries match, regardless of order."""
+
+  #   if len(validator_data) != len(my_data) and len(validator_data) > 0:
+  #     return False
+
+  #   # use ``asdict`` because data is decoded from blockchain as dataclass
+  #   if is_dataclass(validator_data):
+  #     set1 = set(frozenset(asdict(d).items()) for d in validator_data)
+  #   else:
+  #     set1 = set(frozenset(d.items()) for d in validator_data)
+
+  #   if is_dataclass(my_data):
+  #     set2 = set(frozenset(asdict(d).items()) for d in my_data)
+  #   else:
+  #     set2 = set(frozenset(d.items()) for d in my_data)
+
+  #   intersection = set1.intersection(set2)
+  #   logger.info("Matching intersection of %s validator data" % ((len(intersection))/len(set1) * 100))
+  #   logger.info("Validator matching intersection of %s my data" % ((len(intersection))/len(set2) * 100))
+
+  #   return set1 == set2
+  
   def should_attest(self, validator_data, my_data):
     """Checks if two arrays of dictionaries match, regardless of order."""
 
+    # if data length differs and validator did upload data, return False
+    # this means the validator thinks the subnet is broken, but we do not
     if len(validator_data) != len(my_data) and len(validator_data) > 0:
       return False
 
+    # if validator submitted no data, and we have also found the subnet is broken
+    if len(validator_data) == len(my_data) and len(validator_data) == 0:
+      return True
+    
+    # otherwise, check the data matches
+    # at this point, the
+    
     # use ``asdict`` because data is decoded from blockchain as dataclass
-    if is_dataclass(validator_data):
-      set1 = set(frozenset(asdict(d).items()) for d in validator_data)
-    else:
-      set1 = set(frozenset(d.items()) for d in validator_data)
+    # we assume the lists are consistent across all elements
+    # Convert validator_data to a set
+    set1 = set(frozenset(asdict(d).items()) for d in validator_data)
 
-    if is_dataclass(my_data):
-      set2 = set(frozenset(asdict(d).items()) for d in my_data)
-    else:
-      set2 = set(frozenset(d.items()) for d in my_data)
+    # Convert my_data to a set
+    set2 = set(frozenset(d.items()) for d in my_data)
 
     intersection = set1.intersection(set2)
     logger.info("Matching intersection of %s validator data" % ((len(intersection))/len(set1) * 100))
