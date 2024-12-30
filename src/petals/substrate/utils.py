@@ -174,9 +174,9 @@ def get_consensus_data(substrate: SubstrateInterface, subnet_id: int) -> Dict:
     subnet_id
   )
 
-  model_peers_data = SubnetNode.list_from_vec_u8(result["result"])
+  subnet_nodes_data = SubnetNode.list_from_vec_u8(result["result"])
 
-  consensus_data = get_blockchain_peers_consensus_data(model_peers_data)
+  consensus_data = get_blockchain_peers_consensus_data(subnet_nodes_data)
 
   return consensus_data
 
@@ -198,9 +198,9 @@ def get_blochchain_model_peers_submittable(substrate: SubstrateInterface, subnet
     subnet_id
   )
 
-  model_peers_data = SubnetNode.list_from_vec_u8(result["result"])
+  subnet_nodes_data = SubnetNode.list_from_vec_u8(result["result"])
 
-  return model_peers_data
+  return subnet_nodes_data
 
 def get_eligible_consensus_block(
   epochs_interval: int, 

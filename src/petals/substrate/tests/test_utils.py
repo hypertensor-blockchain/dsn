@@ -9,8 +9,8 @@ import threading
 
 from hivemind.utils import get_logger
 
-from petals.substrate.chain_data import RewardsData
-from petals.substrate.chain_functions import add_subnet_node, attest, get_epoch_length, get_rewards_submission, get_rewards_validator, get_subnet_data, get_subnet_id_by_path, validate
+from petals.substrate.chain_data import RewardsData, SubnetNode
+from petals.substrate.chain_functions import add_subnet_node, attest, get_epoch_length, get_rewards_submission, get_rewards_validator, get_subnet_data, get_subnet_id_by_path, get_subnet_nodes_included, validate
 from petals.substrate.config import SubstrateConfigCustom
 from petals.substrate.utils import get_submittable_nodes
 
@@ -56,10 +56,10 @@ def get_substrate_config(n: int):
     Keypair.create_from_uri(f"//{str(n)}").ss58_address
   )
 
-@dataclasses.dataclass
-class SubnetNode:
-  account_id: str
-  peer_id: str
+# @dataclasses.dataclass
+# class SubnetNode:
+#   account_id: str
+#   peer_id: str
 
 def get_subnet_nodes_consensus_data(count: int):
   subnet_nodes = []
@@ -302,7 +302,37 @@ class TestConsensus(threading.Thread):
   def _get_consensus_data(self):
     print("_get_consensus_data")
     """"""
-    consensus_data = get_subnet_nodes_consensus_data(len(PEER_IDS))
+    # consensus_data = get_subnet_nodes_consensus_data(len(PEER_IDS))
+    
+    # imitates what consensus.py does
+
+    # get nodes on chain that are supposed to be included in consensus
+    result = get_subnet_nodes_included(
+      self.substrate_config.interface,
+      self.subnet_id
+    )
+    print("_get_consensus_data result", result)
+
+    subnet_nodes_data = SubnetNode.list_from_vec_u8(result["result"])
+    print("_get_consensus_data subnet_nodes_data", subnet_nodes_data)
+
+    # check test PEER_IDS versus 
+    # filter PEER_IDS that don't match onchain subnet nodes
+    peer_set = set(PEER_IDS)
+    print("_get_consensus_data peer_set", peer_set)
+    filtered_list = [d.peer_id for d in subnet_nodes_data if d.peer_id in peer_set]
+
+    print("filtered_list", filtered_list)
+
+    consensus_data = []
+    for peer_id in filtered_list:
+      node = {
+        'peer_id': peer_id,
+        'score': 10000
+      }
+      consensus_data.append(node)
+
+
     print("consensus_data", consensus_data)
     return consensus_data
 
@@ -315,6 +345,13 @@ class TestConsensus(threading.Thread):
       epoch
     )
     return rewards_submission
+
+  def _has_attested(self, attested_account_ids) -> bool:
+    """Get and return the consensus data from the current validator"""
+    for account_id in attested_account_ids:
+      if account_id == self.account_id:
+        return True
+    return False
 
   def _get_validator(self, epoch):
     print("_get_validator")
@@ -353,7 +390,9 @@ class TestConsensus(threading.Thread):
   def should_attest(self, validator_data, my_data):
     print("should_attest")
     print("should_attest validator_data", validator_data)
+    print("should_attest validator_data len", len(validator_data))
     print("should_attest my_data", my_data)
+    print("should_attest my_data len", len(my_data))
     """Checks if two arrays of dictionaries match, regardless of order."""
 
     # if data length differs and validator did upload data, return False
@@ -361,24 +400,63 @@ class TestConsensus(threading.Thread):
     if len(validator_data) != len(my_data) and len(validator_data) > 0:
       return False
 
+    # if validator submitted no data, and we have also found the subnet is broken
+    if len(validator_data) == len(my_data) and len(validator_data) == 0:
+      return True
+    
     # otherwise, check the data matches
-
+    # at this point, the
+    
     # use ``asdict`` because data is decoded from blockchain as dataclass
-    if is_dataclass(validator_data):
-      set1 = set(frozenset(asdict(d).items()) for d in validator_data)
-    else:
-      set1 = set(frozenset(d.items()) for d in validator_data)
+    # we assume the lists are consistent across all elements
+    # Convert validator_data to a set
+    set1 = set(frozenset(asdict(d).items()) for d in validator_data)
 
-    if is_dataclass(my_data):
-      set2 = set(frozenset(asdict(d).items()) for d in my_data)
-    else:
-      set2 = set(frozenset(d.items()) for d in my_data)
+    # Convert my_data to a set
+    set2 = set(frozenset(d.items()) for d in my_data)
 
     intersection = set1.intersection(set2)
     logger.info("Matching intersection of %s validator data" % ((len(intersection))/len(set1) * 100))
     logger.info("Validator matching intersection of %s my data" % ((len(intersection))/len(set2) * 100))
 
     return set1 == set2
+
+  # def should_attest(self, validator_data, my_data):
+  #   """Checks if two arrays of dictionaries match, regardless of order."""
+
+  #   # if data length differs and validator did upload data, return False
+  #   # this means the validator thinks the subnet is broken, but we do not
+  #   if len(validator_data) != len(my_data) and len(validator_data) > 0:
+  #     return False
+
+  #   # if validator submitted no data, and we have also found the subnet is broken
+  #   if len(validator_data) == len(my_data) and len(validator_data) == 0:
+  #     return True
+    
+  #   # otherwise, check the data matches
+  #   # at this point, the
+    
+  #   # use ``asdict`` because data is decoded from blockchain as dataclass
+  #   # we assume the lists are consistent across all elements
+  #   if is_dataclass(validator_data[0]):
+  #     print("should_attest validator_data is_dataclass")
+  #     set1 = set(frozenset(asdict(d).items()) for d in validator_data)
+  #   else:
+  #     print("should_attest validator_data else")
+  #     set1 = set(frozenset(d.items()) for d in validator_data)
+
+  #   if is_dataclass(my_data[0]):
+  #     print("should_attest my_data is_dataclass")
+  #     set2 = set(frozenset(asdict(d).items()) for d in my_data)
+  #   else:
+  #     print("should_attest my_data else")
+  #     set2 = set(frozenset(d.items()) for d in my_data)
+
+  #   intersection = set1.intersection(set2)
+  #   logger.info("Matching intersection of %s validator data" % ((len(intersection))/len(set1) * 100))
+  #   logger.info("Validator matching intersection of %s my data" % ((len(intersection))/len(set2) * 100))
+
+  #   return set1 == set2
 
 def test_add_subnet_nodes(count: int, path: str):
   print("adding test subnet nodes")
