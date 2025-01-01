@@ -1,6 +1,7 @@
 import dataclasses
 import os
 import time
+from typing import Optional
 from substrateinterface import SubstrateInterface, Keypair
 from dotenv import load_dotenv
 from pathlib import Path
@@ -10,7 +11,7 @@ import threading
 from hivemind.utils import get_logger
 
 from petals.substrate.chain_data import RewardsData, SubnetNode
-from petals.substrate.chain_functions import add_subnet_node, attest, get_epoch_length, get_rewards_submission, get_rewards_validator, get_subnet_data, get_subnet_id_by_path, get_subnet_nodes_included, validate
+from petals.substrate.chain_functions import activate_subnet, add_subnet_node, attest, get_epoch_length, get_rewards_submission, get_rewards_validator, get_subnet_data, get_subnet_id_by_path, get_subnet_nodes_included, validate
 from petals.substrate.config import SubstrateConfigCustom
 from petals.substrate.utils import get_submittable_nodes
 
@@ -84,7 +85,7 @@ class TestConsensus(threading.Thread):
 
   If after, it will begin to validate and or attest epochs
   """
-  def __init__(self, path: str, account_id: str, phrase: str, url: str):
+  def __init__(self, path: str, account_id: str, substrate: SubstrateConfigCustom):
     super().__init__()
     self.subnet_id = None # Not required in case of not initialized yet
     self.path = path
@@ -94,7 +95,8 @@ class TestConsensus(threading.Thread):
     self.subnet_initialized = 9223372036854775807 # max int
     self.last_validated_or_attested_epoch = 0
 
-    self.substrate_config = SubstrateConfigCustom(phrase, url)
+    # self.substrate_config = SubstrateConfigCustom(phrase, url)
+    self.substrate_config = substrate
 
     # blockchain constants
     self.epoch_length = int(str(get_epoch_length(self.substrate_config.interface)))
@@ -119,6 +121,7 @@ class TestConsensus(threading.Thread):
         next_epoch_start_block = self.epoch_length + (block_number - (block_number % self.epoch_length))
         
         # Ensure subnet is activated
+        # this will iterate until the subnet is activated
         if self.subnet_accepting_consensus == False:
           activated = self._activate_subnet()
           if activated == True:
@@ -214,7 +217,7 @@ class TestConsensus(threading.Thread):
             self.last_validated_or_attested_epoch = epoch
             break
       except Exception as e:
-        logger.error("Consensus Error: %s" % e, exc_info=True)
+        logger.error("TestConsensus Error: %s" % e, exc_info=True)
 
   def validate(self):
     print("validate")
@@ -367,25 +370,117 @@ class TestConsensus(threading.Thread):
     """
     Attempt to activate subnet
 
-    Will wait for subnet to be voted in
+    Will wait for subnet to be activated
+
+    1. Check if subnet activated
+    2. If not activated, calculate turn to activate based on peer index
+    3. Wait for the turn to activate to pass
 
     Returns:
       bool: True if subnet was successfully activated, False otherwise.
     """
     subnet_id = get_subnet_id_by_path(self.substrate_config.interface, self.path)
+    print("_activate_subnet subnet_id", subnet_id)
+    assert subnet_id is not None, logger.error("Cannot find subnet at path: %s", self.path)
+    
     subnet_data = get_subnet_data(
       self.substrate_config.interface,
       subnet_id
     )
+    print("_activate_subnet subnet_data", subnet_data)
+    assert subnet_data is not None, logger.error("Cannot find subnet at ID: %s", subnet_id)
 
+    initialized = int(str(subnet_data['initialized']))
+    registration_blocks = int(str(subnet_data['registration_blocks']))
+    activation_block = initialized + registration_blocks
+
+    # if we didn't activate the node, someone indexed before us should have - see logic below
     if subnet_data['activated'] > 0:
       logger.info("Subnet activated, just getting things set up for consensus...")
       self.subnet_accepting_consensus = True
       self.subnet_id = int(str(subnet_id))
       self.subnet_activated = int(str(subnet_data["activated"]))
       return True
-    else:
-      return False
+
+    # randomize activating subnet by node entry index
+    # when subnet is in registration, all new subnet nodes are ``Submittable`` classification
+    # so we check all submittable nodes
+    submittable_nodes = get_submittable_nodes(
+      self.substrate_config.interface,
+      int(str(subnet_id)),
+    )
+    print("_activate_subnet submittable_nodes", submittable_nodes)
+
+    n = 0
+    for node_set in submittable_nodes:
+      n+=1
+      if node_set.account_id == self.account_id:
+        break
+
+    print("_activate_subnet n", n)
+
+    min_node_activation_block = activation_block + BLOCK_SECS*10 * (n-1)
+    max_node_activation_block = activation_block + BLOCK_SECS*10 * n
+    print("_activate_subnet min_node_activation_block", min_node_activation_block)
+    print("_activate_subnet max_node_activation_block", max_node_activation_block)
+
+    block_hash = self.substrate_config.interface.get_block_hash()
+    block_number = self.substrate_config.interface.get_block_number(block_hash)
+    print("_activate_subnet block_number", block_number)
+
+    if block_number < min_node_activation_block or block_number >= max_node_activation_block:
+      # delta = min_node_activation_block - block_number
+      # logger.info(f"Waiting until activation block for {delta} blocks")
+      time.sleep(BLOCK_SECS)
+      self._activate_subnet()
+
+    # Redunant, but if we missed our turn to activate, wait until someone else has to start consensus
+    if block_number >= max_node_activation_block:
+      time.sleep(BLOCK_SECS)
+      self._activate_subnet()
+
+    # if within our designated activation block, then activate
+    # activation is a no-weight transaction, meaning it costs nothing to do
+    if block_number >= min_node_activation_block and block_number < max_node_activation_block:
+      print("_activate_subnet node activating subnet")
+
+      # check if activated already by another node
+      subnet_data = get_subnet_data(
+        self.substrate_config.interface,
+        int(str(subnet_id))
+      )
+      print("_activate_subnet subnet_data", subnet_data)
+
+      if subnet_data['activated'] > 0:
+        print("_activate_subnet already activated")
+        self.subnet_accepting_consensus = True
+        self.subnet_id = int(str(subnet_id))
+        self.subnet_activated = True
+        return True
+
+      print("_activate_subnet attempting to activate subnet", n)
+      # Attempt to activate subnet
+      receipt = activate_subnet(
+        self.substrate_config.interface,
+        self.substrate_config.keypair,
+        int(str(subnet_id)),
+      )
+      print("_activate_subnet is_success", receipt.is_success)
+      for event in receipt.triggered_events:
+        print(f'* {event.value}')
+        
+      if receipt.is_success:
+        self.subnet_accepting_consensus = True
+        self.subnet_id = int(str(subnet_id))
+        self.subnet_activated = True
+        return True
+
+    # check if subnet failed to be activated
+    # this means:
+    # someone else activated it and code miscalculated (contact devs with error if so)
+    # or the subnet didn't meet its activation requirements and should revert on the next ``_activate_subnet`` call
+    time.sleep(BLOCK_SECS)
+    self._activate_subnet()
 
   def should_attest(self, validator_data, my_data):
     print("should_attest")

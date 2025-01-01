@@ -2,8 +2,8 @@ from dataclasses import asdict, is_dataclass
 import threading
 import time
 from petals.substrate.chain_data import RewardsData
-from petals.substrate.chain_functions import attest, get_epoch_length, get_min_required_subnet_consensus_submit_epochs, get_subnet_activated, get_subnet_data, get_subnet_id_by_path, get_rewards_submission, get_rewards_validator, validate
-from petals.substrate.config import BLOCK_SECS, SubstrateConfig
+from petals.substrate.chain_functions import activate_subnet, attest, get_epoch_length, get_min_required_subnet_consensus_submit_epochs, get_subnet_activated, get_subnet_data, get_subnet_id_by_path, get_rewards_submission, get_rewards_validator, validate
+from petals.substrate.config import BLOCK_SECS, SubstrateConfig, SubstrateConfigCustom
 from petals.substrate.utils import get_consensus_data, get_eligible_consensus_block, get_next_epoch_start_block, get_submittable_nodes
 from hivemind.utils import get_logger
 
@@ -20,7 +20,7 @@ class Consensus(threading.Thread):
 
   If after, it will begin to validate and or attest epochs
   """
-  def __init__(self, path: str, account_id: str):
+  def __init__(self, path: str, account_id: str, substrate: SubstrateConfigCustom):
     super().__init__()
     assert path is not None, "path must be specified"
     assert account_id is not None, "account_id must be specified"
@@ -33,9 +33,10 @@ class Consensus(threading.Thread):
     self.subnet_activated = 9223372036854775807 # max int
     self.last_validated_or_attested_epoch = 0
 
+    self.substrate_config = substrate
+
     # blockchain constants
     self.epoch_length = int(str(get_epoch_length(SubstrateConfig.interface)))
-    self.min_required_model_consensus_submit_epochs = get_min_required_subnet_consensus_submit_epochs(SubstrateConfig.interface)
 
     # delete pickles if exist
 
@@ -46,8 +47,8 @@ class Consensus(threading.Thread):
       """"""
       try:
         # get epoch
-        block_hash = SubstrateConfig.interface.get_block_hash()
-        block_number = SubstrateConfig.interface.get_block_number(block_hash)
+        block_hash = self.substrate_config.interface.get_block_hash()
+        block_number = self.substrate_config.interface.get_block_number(block_hash)
         logger.info("Block height: %s " % block_number)
 
         epoch = int(block_number / self.epoch_length)
@@ -67,34 +68,13 @@ class Consensus(threading.Thread):
 
         # Ensure subnet is activated
         if self.subnet_accepting_consensus == False:
-          activated = self._activate_subnet()
+          activated = self._activate_subnet(block_number)
           if activated == True:
             continue
           else:
             # Sleep until voting is complete
             time.sleep(remaining_blocks_until_next_epoch * BLOCK_SECS)
             continue
-
-        # The subnet is activated at this point
-        # 1. Check if subnet can accept consensus
-        # 2. Check if node is submittable
-        """
-        Is subnet initialized
-        """
-        subnet_eligible_block = get_eligible_consensus_block(
-          self.epoch_length, 
-          self.subnet_activated, 
-          self.min_required_model_consensus_submit_epochs
-        )
-
-        is_subnet_consensus_eligible = subnet_eligible_block != None and block_number >= subnet_eligible_block
-
-        # is subnet eligible for consensus (must be initialized for minimum required epochs)
-        if is_subnet_consensus_eligible == False:
-          delta = subnet_eligible_block - block_number
-          logger.info("Model begins accepting consensus on block %s, going to sleep for %s blocks " % (subnet_eligible_block, delta))
-          time.sleep(delta * BLOCK_SECS)
-          continue
 
         """
         Is subnet node initialized and eligible to submit consensus
@@ -105,10 +85,13 @@ class Consensus(threading.Thread):
         # - Must stake onchain
         # - Must be Submittable subnet node class
         if self.subnet_node_eligible == False:
-          submittable_nodes = get_submittable_nodes(SubstrateConfig.interface, self.subnet_id)
+          submittable_nodes = get_submittable_nodes(
+            self.substrate_config.interface,
+            self.subnet_id,
+          )
 
           for node_set in submittable_nodes:
-            if node_set[0] == self.account_id:
+            if node_set.account_id == self.account_id:
               self.subnet_node_eligible = True
               break
           
@@ -152,8 +135,8 @@ class Consensus(threading.Thread):
         while True:
           # wait for validator on every block
           time.sleep(BLOCK_SECS)
-          block_hash = SubstrateConfig.interface.get_block_hash()
-          block_number = SubstrateConfig.interface.get_block_number(block_hash)
+          block_hash = self.substrate_config.interface.get_block_hash()
+          block_number = self.substrate_config.interface.get_block_number(block_hash)
           logger.info("Block height: %s " % block_number)
 
           epoch = int(block_number / self.epoch_length)
@@ -238,13 +221,13 @@ class Consensus(threading.Thread):
     
   def _get_consensus_data(self):
     """"""
-    consensus_data = get_consensus_data(SubstrateConfig.interface, self.subnet_id)
+    consensus_data = get_consensus_data(self.substrate_config.interface, self.subnet_id)
     return consensus_data
 
   def _get_validator_consensus_submission(self, epoch: int):
     """Get and return the consensus data from the current validator"""
     rewards_submission = get_rewards_submission(
-      SubstrateConfig.interface,
+      self.substrate_config.interface,
       self.subnet_id,
       epoch
     )
@@ -259,13 +242,13 @@ class Consensus(threading.Thread):
 
   def _get_validator(self, epoch):
     validator = get_rewards_validator(
-      SubstrateConfig.interface,
+      self.substrate_config.interface,
       self.subnet_id,
       epoch
     )
     return validator
   
-  def _activate_subnet(self):
+  def _activate_subnet(self, block_number: int):
     """
     Attempt to activate subnet within the subnet
 
@@ -274,11 +257,15 @@ class Consensus(threading.Thread):
     Returns:
       bool: True if subnet was successfully activated, False otherwise.
     """
-    subnet_id = get_subnet_id_by_path(SubstrateConfig.interface, self.path)
+    subnet_id = get_subnet_id_by_path(self.substrate_config.interface, self.path)
     subnet_data = get_subnet_data(
-      SubstrateConfig.interface,
+      self.substrate_config.interface,
       subnet_id
     )
+
+    initialized = int(str(subnet_data['initialized']))
+    registration_blocks = int(str(subnet_data['registration_blocks']))
+    activation_block = initialized + registration_blocks
 
     if subnet_data['activated'] > 0:
       logger.info("Subnet activated, just getting things set up for consensus...")
@@ -286,8 +273,20 @@ class Consensus(threading.Thread):
       self.subnet_id = int(str(subnet_id))
       self.subnet_activated = int(str(subnet_data["activated"]))
       return True
-    else:
-      return False
+    elif block_number > activation_block and subnet_data['activated'] == 0:
+      # Attempt to activate subnet
+      receipt = activate_subnet(
+        self.substrate_config.interface,
+        self.substrate_config.keypair,
+        subnet_id,
+      )
+      if receipt.is_success:
+        self.subnet_accepting_consensus = True
+        self.subnet_id = int(str(subnet_id))
+        self.subnet_activated = True
+        return True
+
+    return False
 
   # def should_attest(self, validator_data, my_data):
   #   """Checks if two arrays of dictionaries match, regardless of order."""
@@ -311,7 +310,7 @@ class Consensus(threading.Thread):
   #   logger.info("Validator matching intersection of %s my data" % ((len(intersection))/len(set2) * 100))
 
   #   return set1 == set2
-  
+
   def should_attest(self, validator_data, my_data):
     """Checks if two arrays of dictionaries match, regardless of order."""
 

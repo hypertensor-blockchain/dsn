@@ -39,19 +39,6 @@ custom_rpc_type_registry = {
         ["c", "Vec<u8>"],
       ],
     },
-    "SubnetNode": {
-      "type": "struct",
-      "type_mapping": [
-        ["account_id", "AccountId"],
-        ["hotkey", "AccountId"],
-        ["peer_id", "Vec<u8>"],
-        ["initialized", "u64"],
-        ["classification", "SubnetNodeClassification"],
-        ["a", "Vec<u8>"],
-        ["b", "Vec<u8>"],
-        ["c", "Vec<u8>"],
-      ],
-    },
     "SubnetNodeClassification": {
       "type": "struct",
       "type_mapping": [
@@ -101,11 +88,6 @@ def from_scale_encoding(
     is_vec: bool = False,
     is_option: bool = False,
 ) -> Optional[Dict]:
-    print("from_scale_encoding input", input)
-    print("from_scale_encoding type_name", type_name)
-    print("from_scale_encoding is_vec", is_vec)
-    print("from_scale_encoding is_option", is_option)
-
     """
     Returns the decoded data from the SCALE encoded input.
 
@@ -158,7 +140,6 @@ def from_scale_encoding_using_type_string(
   rpc_runtime_config.update_type_registry(custom_rpc_type_registry)
 
   obj = rpc_runtime_config.create_scale_object(type_string, data=as_scale_bytes)
-  print("from_scale_encoding_using_type_string obj", obj)
 
   return obj.decode()
 

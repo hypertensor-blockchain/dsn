@@ -1,5 +1,7 @@
 import asyncio
 import multiprocessing as mp
+from petals.substrate.config import SubstrateConfigCustom
+from petals.substrate.tests.simulations.sim_register_subnet import sim_register_subnet
 from petals.substrate.tests.simulations.sim_activated_subnet import sim_activated_subnet
 from petals.substrate.tests.test_utils import LOCAL_URL, MODEL_PATH, MODEL_MEMORY_MB, TestConsensus, get_substrate_config
 
@@ -22,8 +24,9 @@ def run_consensus(subnet_node_idx: int, path: str):
     consensus = TestConsensus(
       path=path, 
       account_id=substrate_config.account_id, 
-      phrase=f"//{str(subnet_node_idx)}", 
-      url=LOCAL_URL
+      # phrase=f"//{str(subnet_node_idx)}", 
+      # url=LOCAL_URL
+      substrate=SubstrateConfigCustom(f"//{str(subnet_node_idx)}", LOCAL_URL)
     )
 
     loop.run_until_complete(consensus.run())
@@ -38,7 +41,8 @@ def run_consensus(subnet_node_idx: int, path: str):
 def sim_consensus(path: str, memory_mb: int):
   # create activated subnet
   # add subnet nodes
-  subnet_id, subnet_node_count = sim_activated_subnet(path, memory_mb)
+  # subnet_id, subnet_node_count = sim_activated_subnet(path, memory_mb)
+  subnet_id, subnet_node_count = sim_register_subnet(path, memory_mb)
   print("sim_consensus subnet_id        : ", subnet_id)
   print("sim_consensus subnet_node_count: ", subnet_node_count)
 

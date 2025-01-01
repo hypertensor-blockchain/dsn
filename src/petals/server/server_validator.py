@@ -37,6 +37,7 @@ from petals.server.handler import TransformerConnectionHandler
 from petals.server.memory_cache import MemoryCache
 from petals.server.reachability import ReachabilityProtocol, check_direct_reachability, validate_reachability
 from petals.server.throughput import get_dtype_name, get_server_throughput
+from petals.substrate.consensus import Consensus
 from petals.utils.auto_config import AutoDistributedConfig
 from petals.utils.convert_block import QuantType, check_device_balance, convert_block
 from petals.utils.dht import declare_active_modules, get_remote_module_infos
@@ -105,7 +106,6 @@ class Server:
     ):
         """Create a server with one or more bloom blocks. See run_server.py for documentation."""
         self.is_validator = False
-        # self.account_id = account_id
 
         converted_model_name_or_path = get_compatible_model_repo(converted_model_name_or_path)
         self.converted_model_name_or_path = converted_model_name_or_path
@@ -304,6 +304,12 @@ class Server:
         self.module_container = None
         self.stop = threading.Event()
 
+        Consensus(
+            converted_model_name_or_path,
+            self.account_id
+        )
+
+
     def _choose_num_blocks(self) -> int:
         assert self.device.type in ("cuda", "mps"), (
             "GPU is not available. If you want to run a CPU-only server, please specify --num_blocks. "
@@ -355,29 +361,30 @@ class Server:
             f"Server will fill your GPU memory with {num_blocks} transformer blocks. "
             f"If you want to leave some free GPU memory, please specify a lesser --num_blocks manually"
         )
+
         return num_blocks
 
     def run(self):
-        try:
-            with open(f"{self.identity_path}", "rb") as f:
-                data = f.read()
-                key_data = crypto_pb2.PrivateKey.FromString(data).data
-                raw_private_key = ed25519.Ed25519PrivateKey.from_private_bytes(key_data[:32])
-                private_key = Ed25519PrivateKey(private_key=raw_private_key)
+        # try:
+        #     with open(f"{self.identity_path}", "rb") as f:
+        #         data = f.read()
+        #         key_data = crypto_pb2.PrivateKey.FromString(data).data
+        #         raw_private_key = ed25519.Ed25519PrivateKey.from_private_bytes(key_data[:32])
+        #         private_key = Ed25519PrivateKey(private_key=raw_private_key)
 
-            self.inference_validator = InferenceValidator(
-                self,
-                self.converted_model_name_or_path,
-                self.block_config.num_hidden_layers,
-                self.dht,
-                self.num_blocks,
-                POSAuthorizer(private_key),
-                self.identity_path,
-                True,
-            )
-            logger.info("Server InferenceValidator success")
-        except Exception as e:
-            logger.error("Server InferenceValidator Error: " + str(e))
+        #     self.inference_validator = InferenceValidator(
+        #         self,
+        #         self.converted_model_name_or_path,
+        #         self.block_config.num_hidden_layers,
+        #         self.dht,
+        #         self.num_blocks,
+        #         POSAuthorizer(private_key),
+        #         self.identity_path,
+        #         True,
+        #     )
+        #     logger.info("Server InferenceValidator success")
+        # except Exception as e:
+        #     logger.error("Server InferenceValidator Error: " + str(e))
 
         while True:
             block_indices = self._choose_blocks()

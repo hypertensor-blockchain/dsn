@@ -10,7 +10,7 @@ def test_activate_subnet(subnet_id: int):
       substrate_config.keypair,
       subnet_id,
     )
-    # print(receipt)
+    print("test_activate_subnet receipt", receipt)
     return receipt
   except Exception as e:
     print("Error: ", e, exc_info=True)
