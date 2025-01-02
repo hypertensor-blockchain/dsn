@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any, Optional
 from substrateinterface import SubstrateInterface, Keypair, ExtrinsicReceipt
 from substrateinterface.exceptions import SubstrateRequestException
 from tenacity import retry, stop_after_attempt, wait_exponential
@@ -7,7 +7,8 @@ def validate(
   substrate: SubstrateInterface,
   keypair: Keypair,
   subnet_id: int,
-  data
+  data,
+  args: Optional[Any] = None,
 ):
   """
   Submit consensus data on each epoch with no conditionals
@@ -27,27 +28,18 @@ def validate(
     call_function='validate',
     call_params={
       'subnet_id': subnet_id,
-      'data': data
+      'data': data,
+      'args': args,
     }
   )
 
   # create signed extrinsic
   extrinsic = substrate.create_signed_extrinsic(call=call, keypair=keypair)
 
-  """
-  submit extrinsic
-  This will retry up to 4 times when except is returned
-  """
   @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
   def submit_extrinsic():
     try:
       receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
-      if receipt.is_success:
-        print('✅ Success, triggered events:')
-        for event in receipt.triggered_events:
-          print(f'* {event.value}')
-      else:
-        print('⚠️ Extrinsic Failed: ', receipt.error_message)
       return receipt
     except SubstrateRequestException as e:
       print("Failed to send: {}".format(e))
@@ -87,12 +79,6 @@ def attest(
   def submit_extrinsic():
     try:
       receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
-      if receipt.is_success:
-        print('✅ Success, triggered events:')
-        for event in receipt.triggered_events:
-          print(f'* {event.value}')
-      else:
-        print('⚠️ Extrinsic Failed: ', receipt.error_message)
       return receipt
     except SubstrateRequestException as e:
       print("Failed to send: {}".format(e))
@@ -133,12 +119,6 @@ def register_subnet(
   def submit_extrinsic():
     try:
       receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
-      if receipt.is_success:
-        print('✅ Success, triggered events:')
-        for event in receipt.triggered_events:
-          print(f'* {event.value}')
-      else:
-        print('⚠️ Extrinsic Failed: ', receipt.error_message)
       return receipt
     except SubstrateRequestException as e:
       print("Failed to send: {}".format(e))
@@ -173,12 +153,6 @@ def activate_subnet(
   def submit_extrinsic():
     try:
       receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
-      if receipt.is_success:
-        print('✅ Success, triggered events:')
-        for event in receipt.triggered_events:
-          print(f'* {event.value}')
-      else:
-        print('⚠️ Extrinsic Failed: ', receipt.error_message)
       return receipt
     except SubstrateRequestException as e:
       print("Failed to send: {}".format(e))
@@ -213,12 +187,6 @@ def remove_subnet(
   def submit_extrinsic():
     try:
       receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
-      if receipt.is_success:
-        print('✅ Success, triggered events:')
-        for event in receipt.triggered_events:
-          print(f'* {event.value}')
-      else:
-        print('⚠️ Extrinsic Failed: ', receipt.error_message)
       return receipt
     except SubstrateRequestException as e:
       print("Failed to send: {}".format(e))
@@ -265,12 +233,6 @@ def vote_subnet_subnet_node_dishonest(
   def submit_extrinsic():
     try:
       receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
-      if receipt.is_success:
-        print('✅ Success, triggered events:')
-        for event in receipt.triggered_events:
-          print(f'* {event.value}')
-      else:
-        print('⚠️ Extrinsic Failed: ', receipt.error_message)
       return receipt
     except SubstrateRequestException as e:
       print("Failed to send: {}".format(e))
@@ -544,12 +506,6 @@ def add_subnet_node(
   def submit_extrinsic():
     try:
       receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
-      if receipt.is_success:
-        print('✅ Success, triggered events:')
-        # for event in receipt.triggered_events:
-        #   print(f'* {event.value}')
-      else:
-        print('⚠️ Extrinsic Failed: ', receipt.error_message)
       return receipt
     except SubstrateRequestException as e:
       print("Failed to send: {}".format(e))
@@ -594,10 +550,6 @@ def register_subnet_node(
   def submit_extrinsic():
     try:
       receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
-      if receipt.is_success:
-        print('✅ Success, triggered events:')
-      else:
-        print('⚠️ Extrinsic Failed: ', receipt.error_message)
       return receipt
     except SubstrateRequestException as e:
       print("Failed to send: {}".format(e))
@@ -632,10 +584,6 @@ def activate_subnet_node(
   def submit_extrinsic():
     try:
       receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
-      if receipt.is_success:
-        print('✅ Success, triggered events:')
-      else:
-        print('⚠️ Extrinsic Failed: ', receipt.error_message)
       return receipt
     except SubstrateRequestException as e:
       print("Failed to send: {}".format(e))
@@ -670,10 +618,6 @@ def deactivate_subnet_node(
   def submit_extrinsic():
     try:
       receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
-      if receipt.is_success:
-        print('✅ Success, triggered events:')
-      else:
-        print('⚠️ Extrinsic Failed: ', receipt.error_message)
       return receipt
     except SubstrateRequestException as e:
       print("Failed to send: {}".format(e))
@@ -711,12 +655,6 @@ def remove_subnet_node(
   def submit_extrinsic():
     try:
       receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
-      if receipt.is_success:
-        print('✅ Success, triggered events:')
-        for event in receipt.triggered_events:
-          print(f'* {event.value}')
-      else:
-        print('⚠️ Extrinsic Failed: ', receipt.error_message)
       return receipt
     except SubstrateRequestException as e:
       print("Failed to send: {}".format(e))
@@ -754,12 +692,6 @@ def add_to_stake(
   def submit_extrinsic():
     try:
       receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
-      if receipt.is_success:
-        print('✅ Success, triggered events:')
-        for event in receipt.triggered_events:
-          print(f'* {event.value}')
-      else:
-        print('⚠️ Extrinsic Failed: ', receipt.error_message)
       return receipt
     except SubstrateRequestException as e:
       print("Failed to send: {}".format(e))
@@ -800,12 +732,6 @@ def remove_stake(
   def submit_extrinsic():
     try:
       receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
-      if receipt.is_success:
-        print('✅ Success, triggered events:')
-        for event in receipt.triggered_events:
-          print(f'* {event.value}')
-      else:
-        print('⚠️ Extrinsic Failed: ', receipt.error_message)
       return receipt
     except SubstrateRequestException as e:
       print("Failed to send: {}".format(e))
@@ -843,12 +769,6 @@ def add_to_delegate_stake(
   def submit_extrinsic():
     try:
       receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
-      if receipt.is_success:
-        print('✅ Success, triggered events:')
-        for event in receipt.triggered_events:
-          print(f'* {event.value}')
-      else:
-        print('⚠️ Extrinsic Failed: ', receipt.error_message)
       return receipt
     except SubstrateRequestException as e:
       print("Failed to send: {}".format(e))
