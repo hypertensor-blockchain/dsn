@@ -52,13 +52,11 @@ class _AutoDistributedBase:
         if proper_cls is None:
             raise ValueError(f"Petals does not have {cls.__name__} for model type {config.model_type}")
 
-        if proper_cls.__name__ == "DistributedBloomForCausalLMValidator":
-            # proper_cls(authorizer=authorizer)
-            # return proper_cls.from_pretrained(model_name_or_path, *args, **kwargs, dht=dht)
-            # return proper_cls.from_pretrained(model_name_or_path, *args, **kwargs, authorizer=authorizer)
-            return proper_cls.from_pretrained(model_name_or_path, *args, **kwargs, identity_path=identity_path)
+        # if proper_cls.__name__ == "DistributedBloomForCausalLMValidator":
+        #     return proper_cls.from_pretrained(model_name_or_path, *args, **kwargs, identity_path=identity_path)
 
-        return proper_cls.from_pretrained(model_name_or_path, *args, **kwargs)
+        # return proper_cls.from_pretrained(model_name_or_path, *args, **kwargs)
+        return proper_cls.from_pretrained(model_name_or_path, *args, **kwargs, identity_path=identity_path)
 
 
 class DefaultRevisionMixin:

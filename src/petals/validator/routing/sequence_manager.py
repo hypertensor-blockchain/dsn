@@ -18,7 +18,6 @@ from hivemind import DHT, P2P, MSGPackSerializer, PeerID
 from hivemind.dht.node import Blacklist
 from hivemind.moe.client.remote_expert_worker import RemoteExpertWorker
 from hivemind.proto import runtime_pb2
-from hivemind.utils.auth import AuthorizerBase
 from hivemind.utils.logging import get_logger
 from hivemind.proto import crypto_pb2
 from hivemind.utils.crypto import Ed25519PrivateKey

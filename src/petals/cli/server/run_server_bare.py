@@ -15,6 +15,7 @@ from petals.utils.version import validate_version
 
 logger = get_logger(__name__)
 
+# python -m petals.cli.server.run_server_bare 
 
 def main():
     # fmt:off

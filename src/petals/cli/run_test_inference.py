@@ -10,6 +10,8 @@ from transformers import AutoTokenizer
 
 logger = logging.getLogger(__name__)
 
+# python -m petals.cli.run_test_inference 
+
 def main():
   parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
   parser.add_argument(
@@ -21,92 +23,92 @@ def main():
   args = parser.parse_args()
 
   # Choose any model available at dashboard.hypertensor.org
-  model_name = "bigscience/bloom-560m"  # This one is fine-tuned Llama 2 (70B)
+  model_name = "NousResearch/Hermes-3-Llama-3.2-3B"  # This one is fine-tuned Llama 2 (70B)
   
   print(model_name)
   # Connect to a distributed network hosting model layers
   tokenizer = AutoTokenizer.from_pretrained(model_name)
-  print("tokenizer", tokenizer)
 
   # Run the model as if it were on your computer
-  inputs = tokenizer("A cat sat", return_tensors="pt")["input_ids"]
+#   inputs = tokenizer("A cat sat", return_tensors="pt")["input_ids"]
+  inputs = tokenizer("Explain the concept of quantum entanglement", return_tensors="pt")["input_ids"]
 
   # """Client"""
-  # model = AutoDistributedModelForCausalLM.from_pretrained(model_name)
-  # print("model", model)
-
-  # outputs = model.generate(inputs, max_new_tokens=5)
-
-  # pprint.pprint(tokenizer.decode(outputs[0])) 
-
-  """Validator"""
-  model = AutoDistributedModelForCausalLMValidator.from_pretrained(model_name)
+  model = AutoDistributedModelForCausalLM.from_pretrained(model_name, identity_path="private_key.key")
   print("model", model)
 
-  peer_spans = [
-     {
-        'peer_id':"12D3KooWByn5SC2anUgfHYiyFempbDhUyx1k9jVP7QApNC5PVCwn",
-        'start':0,
-        'end':1,
-     },
-      {
-        'peer_id':"12D3KooWByn5SC2anUgfHYiyFempbDhUyx1k9jVP7QApNC5PVCwn",
-        'start':1,
-        'end':2,
-     },
-     {
-        'peer_id':"12D3KooWByn5SC2anUgfHYiyFempbDhUyx1k9jVP7QApNC5PVCwn",
-        'start':2,
-        'end':3,
-     },
-     {
-        'peer_id':"12D3KooWByn5SC2anUgfHYiyFempbDhUyx1k9jVP7QApNC5PVCwn",
-        'start':3,
-        'end':4,
-     },
-     {
-        'peer_id':"12D3KooWGMq35p86Q4zd574hq4MyHzx7boJZ6hQcuKJF9cp3Qdhw",
-        'start':4,
-        'end':5,
-     },
-  ]
+  outputs = model.generate(inputs, max_new_tokens=1024)
 
-  inference_session_data, outputs = model.generate_tensors(
-      inputs, 
-      peers=peer_spans,
-      max_new_tokens=5,
-      # cached_server_sessions=cached_server_sessions
-  )
+  pprint.pprint(tokenizer.decode(outputs[0])) 
 
-  print("outputs\n")
-  pprint.pprint(outputs)
-  print("inference_session_data\n")
-  pprint.pprint(inference_session_data)
+  """Validator"""
+#   model = AutoDistributedModelForCausalLMValidator.from_pretrained(model_name)
+#   print("model", model)
 
-  pprint.pprint(tokenizer.decode(outputs[0]))  # A cat sat on a mat...
+#   peer_spans = [
+#      {
+#         'peer_id':"12D3KooWByn5SC2anUgfHYiyFempbDhUyx1k9jVP7QApNC5PVCwn",
+#         'start':0,
+#         'end':1,
+#      },
+#       {
+#         'peer_id':"12D3KooWByn5SC2anUgfHYiyFempbDhUyx1k9jVP7QApNC5PVCwn",
+#         'start':1,
+#         'end':2,
+#      },
+#      {
+#         'peer_id':"12D3KooWByn5SC2anUgfHYiyFempbDhUyx1k9jVP7QApNC5PVCwn",
+#         'start':2,
+#         'end':3,
+#      },
+#      {
+#         'peer_id':"12D3KooWByn5SC2anUgfHYiyFempbDhUyx1k9jVP7QApNC5PVCwn",
+#         'start':3,
+#         'end':4,
+#      },
+#      {
+#         'peer_id':"12D3KooWGMq35p86Q4zd574hq4MyHzx7boJZ6hQcuKJF9cp3Qdhw",
+#         'start':4,
+#         'end':5,
+#      },
+#   ]
 
-  print("Running second inference sequence\n")
+#   inference_session_data, outputs = model.generate_tensors(
+#       inputs, 
+#       peers=peer_spans,
+#       max_new_tokens=5,
+#       # cached_server_sessions=cached_server_sessions
+#   )
 
-  cached_server_sessions = []
+#   print("outputs\n")
+#   pprint.pprint(outputs)
+#   print("inference_session_data\n")
+#   pprint.pprint(inference_session_data)
 
-  for data in inference_session_data:
-    if data["server_idx"] == 4:
-      print("found server_idx 4")
-      cached_server_sessions.append(data)
+#   pprint.pprint(tokenizer.decode(outputs[0]))  # A cat sat on a mat...
 
-  print("cached_server_sessions\n")
-  pprint.pprint(cached_server_sessions)
+#   print("Running second inference sequence\n")
 
-  inference_session_data, outputs = model.generate_tensors(
-      inputs, 
-      peers=peer_spans,
-      max_new_tokens=5,
-      cached_server_sessions=cached_server_sessions
-  )
+#   cached_server_sessions = []
 
-  print("cached_server_sessions\n")
-  print("last output\n")
-  pprint.pprint(tokenizer.decode(outputs[0]))  # A cat sat on a mat...
+#   for data in inference_session_data:
+#     if data["server_idx"] == 4:
+#       print("found server_idx 4")
+#       cached_server_sessions.append(data)
+
+#   print("cached_server_sessions\n")
+#   pprint.pprint(cached_server_sessions)
+
+#   inference_session_data, outputs = model.generate_tensors(
+#       inputs, 
+#       peers=peer_spans,
+#       max_new_tokens=5,
+#       cached_server_sessions=cached_server_sessions
+#   )
+
+#   print("cached_server_sessions\n")
+#   print("last output\n")
+#   pprint.pprint(tokenizer.decode(outputs[0]))  # A cat sat on a mat...
 
 
 if __name__ == "__main__":

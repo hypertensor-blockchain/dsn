@@ -222,14 +222,14 @@ class DistributedBloomModelValidator(FromPretrainedMixinValidator, PTuneMixinVal
         config: DistributedBloomConfigValidator, 
         *, 
         dht: Optional[hivemind.DHT] = None, 
-        identity_path: Optional[Any] = None
+        identity_path: Optional[str] = None
     ):
         n_layer, config.num_hidden_layers = config.num_hidden_layers, 0  # Prevent initialization
         super().__init__(config)
         assert len(self.h) == 0
         config.num_hidden_layers = n_layer
 
-        self.h = RemoteSequentialValidator(config, identity_path=identity_path)
+        self.h = RemoteSequentialValidator(config, dht=dht, identity_path=identity_path)
 
         self.requires_grad_(False)  # Forbid accumulate grads for embeddings and layernorm
         self.init_prompts(config)
@@ -313,7 +313,7 @@ class DistributedBloomForCausalLMValidator(FromPretrainedMixinValidator, RemoteG
 
     config_class = DistributedBloomConfigValidator
 
-    def __init__(self, config: DistributedBloomConfigValidator, identity_path: Optional[Any] = None):
+    def __init__(self, config: DistributedBloomConfigValidator, identity_path: Optional[str] = None):
         BloomPreTrainedModel.__init__(self, config)
         self.transformer = DistributedBloomModelValidator(config, identity_path=identity_path)
         self.lm_head = LMHeadValidator(config)
