@@ -35,13 +35,19 @@ class DistributedBloomModel(FromPretrainedMixin, PTuneMixin, BloomModel):
 
     config_class = DistributedBloomConfig
 
-    def __init__(self, config: DistributedBloomConfig, *, dht: Optional[hivemind.DHT] = None):
+    def __init__(
+        self, 
+        config: DistributedBloomConfig, 
+        *, 
+        dht: Optional[hivemind.DHT] = None,
+        identity_path: Optional[str] = None
+    ):
         n_layer, config.num_hidden_layers = config.num_hidden_layers, 0  # Prevent initialization
         super().__init__(config)
         assert len(self.h) == 0
         config.num_hidden_layers = n_layer
 
-        self.h = RemoteSequential(config, dht=dht)
+        self.h = RemoteSequential(config, dht=dht, identity_path=identity_path)
 
         self.requires_grad_(False)  # Forbid accumulate grads for embeddings and layernorm
         self.init_prompts(config)
@@ -125,9 +131,9 @@ class DistributedBloomForCausalLM(FromPretrainedMixin, RemoteGenerationMixin, Bl
 
     config_class = DistributedBloomConfig
 
-    def __init__(self, config: DistributedBloomConfig):
+    def __init__(self, config: DistributedBloomConfig, identity_path: Optional[str] = None):
         BloomPreTrainedModel.__init__(self, config)
-        self.transformer = DistributedBloomModel(config)
+        self.transformer = DistributedBloomModel(config, identity_path=identity_path)
         self.lm_head = LMHead(config)
 
         # Initialize weights and apply final processing

@@ -45,7 +45,7 @@ class DistributedLlamaModel(FromPretrainedMixin, PTuneMixin, LlamaModel):
         assert len(self.layers) == 0
         config.num_hidden_layers = n_layer
 
-        self.layers = RemoteSequentialValidator(config, dht=dht, identity_path=identity_path)
+        self.layers = RemoteSequential(config, dht=dht, identity_path=identity_path)
 
         self.requires_grad_(False)  # Forbid accumulate grads for embeddings and layernorm
         self.init_prompts(config)
@@ -151,7 +151,7 @@ class DistributedLlamaForCausalLM(FromPretrainedMixin, RemoteGenerationMixin, Ll
 
     def __init__(self, config: DistributedLlamaConfig, identity_path: Optional[str] = None):
         LlamaPreTrainedModel.__init__(self, config)
-        self.model = DistributedLlamaModelValidator(config, identity_path=identity_path)
+        self.model = DistributedLlamaModel(config, identity_path=identity_path)
         self.pretraining_tp = config.pretraining_tp
         self.vocab_size = config.vocab_size
         self.lm_head = LMHead(config)

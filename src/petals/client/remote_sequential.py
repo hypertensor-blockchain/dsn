@@ -30,6 +30,7 @@ class RemoteSequential(nn.Module):
         dht: Optional[DHT] = None,
         start_block: Optional[int] = None,
         end_block: Optional[int] = None,
+        identity_path: Optional[str] = None,
         **kwargs,
     ):
         super().__init__()
@@ -44,7 +45,7 @@ class RemoteSequential(nn.Module):
             if end_block is None:
                 end_block = self.config.num_hidden_layers
             block_uids = tuple(f"{config.dht_prefix}{UID_DELIMITER}{i}" for i in range(start_block, end_block))
-            sequence_manager = RemoteSequenceManager(config, block_uids, dht=dht, **kwargs)
+            sequence_manager = RemoteSequenceManager(config, block_uids, dht=dht, identity_path=identity_path, **kwargs)
         self.sequence_manager = sequence_manager
 
         self._active_session = ContextVar("active_session", default=None)

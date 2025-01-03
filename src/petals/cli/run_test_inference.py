@@ -31,13 +31,17 @@ def main():
 
   # Run the model as if it were on your computer
 #   inputs = tokenizer("A cat sat", return_tensors="pt")["input_ids"]
-  inputs = tokenizer("Explain the concept of quantum entanglement", return_tensors="pt")["input_ids"]
+  inputs = tokenizer("what is 2+2?", return_tensors="pt")["input_ids"]
 
   # """Client"""
-  model = AutoDistributedModelForCausalLM.from_pretrained(model_name, identity_path="private_key.key")
+  model = AutoDistributedModelForCausalLM.from_pretrained(
+     model_name,
+     initial_peers=['/ip4/172.18.250.110/tcp/31330/p2p/12D3KooWBF38f6Y9NE4tMUQRfQ7Yt2HS26hnqUTB88isTZF8bwLs'],
+     identity_path="private_key.key"
+    )
   print("model", model)
 
-  outputs = model.generate(inputs, max_new_tokens=1024)
+  outputs = model.generate(inputs, max_new_tokens=12)
 
   pprint.pprint(tokenizer.decode(outputs[0])) 
 
