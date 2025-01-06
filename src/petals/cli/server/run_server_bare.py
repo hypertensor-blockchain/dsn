@@ -1,3 +1,6 @@
+"""
+Run a node not reliant on the blockchain
+"""
 import argparse
 import logging
 
