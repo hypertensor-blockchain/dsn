@@ -16,20 +16,20 @@
     - `python -m venv .venv`
     - `source .venv/bin/activate`
 - Install: `python -m pip install .`
-- Generate RSA private key (Optional): `openssl genpkey -algorithm RSA -out private_key.key -pkeyopt rsa_keygen_bits:2048`
+- Generate Ed25519 private key (Required for validator node): `python -m petals.cli.crypto.keygen`
 
 <h4>Basic Usage</h4>
 
 Start your own subnet:
 
 ```bash
-python -m petals.cli.run_server_validator bigscience/bloom-560m --host_maddrs /ip4/0.0.0.0/tcp/{PORT} ip4/0.0.0.0/udp/{PORT}/quic --announce_maddrs ip4/{IP}/tcp/{PORT}/ip4/{IP}/udp/{PORT}/quic --new_swarm
+python -m petals.cli.run_server_validator bigscience/bloom-560m --host_maddrs /ip4/0.0.0.0/tcp/{PORT} ip4/0.0.0.0/udp/{PORT}/quic --announce_maddrs ip4/{IP}/tcp/{PORT}/ip4/{IP}/udp/{PORT}/quic --identity_path {PRIVATE_KEY_PATH} --new_swarm
 ```
 
 Start your own subnet validator node:
 
 ```bash
-python -m petals.cli.run_server_validator bigscience/bloom-560m --public_ip {IP} --port {PORT} --initial_peers {INITIAL_PEERS}
+python -m petals.cli.run_server_validator bigscience/bloom-560m --public_ip {IP} --port {PORT} --initial_peers {INITIAL_PEERS} --identity_path {PRIVATE_KEY_PATH}
 ```
 Instead of using `--initial_peers`, the `constants.py` file can be updated to include them. Read the full documentation or the `cli` directory for all available arguments.
 

@@ -21,7 +21,7 @@ from hivemind.proto.runtime_pb2 import CompressionType
 from hivemind.utils.logging import get_logger
 from hivemind.proto import crypto_pb2
 from hivemind.utils.crypto import Ed25519PrivateKey
-from hivemind.utils.auth import POSAuthorizer
+from hivemind.utils.auth import AuthorizerBase, POSAuthorizer
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
 from transformers import PretrainedConfig
@@ -99,12 +99,14 @@ class Server:
         tensor_parallel_devices: Optional[Sequence[torch.device]] = None,
         skip_reachability_check: bool = False,
         reachable_via_relay: Optional[bool] = None,
+        authorizer: Optional[AuthorizerBase] = None,
         use_relay: bool = True,
         use_auto_relay: bool = True,
         adapters: Sequence[str] = (),
         **kwargs,
     ):
         """Create a server with one or more bloom blocks. See run_server.py for documentation."""
+        print("Server authorizer", authorizer)
         self.is_validator = False
 
         converted_model_name_or_path = get_compatible_model_repo(converted_model_name_or_path)
@@ -145,19 +147,11 @@ class Server:
             for block_index in range(self.block_config.num_hidden_layers)
         ]
 
-        self.identity_path = kwargs.get('identity_path', None)
-        with open(f"{self.identity_path}", "rb") as f:
-            data = f.read()
-            key_data = crypto_pb2.PrivateKey.FromString(data).data
-            raw_private_key = ed25519.Ed25519PrivateKey.from_private_bytes(key_data[:32])
-            private_key = Ed25519PrivateKey(private_key=raw_private_key)
-
         if reachable_via_relay is None:
             is_reachable = check_direct_reachability(
                 initial_peers=initial_peers, 
                 use_relay=False, 
-                **dict(kwargs, authorizer=POSAuthorizer(private_key))
-                # **kwargs
+                **dict(kwargs, authorizer=authorizer)
             )
             reachable_via_relay = is_reachable is False  # if can't check reachability (returns None), run a full peer
             logger.info(f"This server is accessible {'via relays' if reachable_via_relay else 'directly'}")
@@ -169,7 +163,7 @@ class Server:
             use_relay=use_relay,
             use_auto_relay=use_auto_relay,
             client_mode=reachable_via_relay,
-            **dict(kwargs, authorizer=POSAuthorizer(private_key))
+            **dict(kwargs, authorizer=authorizer)
             # **kwargs,
         )
         self.reachability_protocol = ReachabilityProtocol.attach_to_dht(self.dht) if not reachable_via_relay else None
@@ -304,10 +298,10 @@ class Server:
         self.module_container = None
         self.stop = threading.Event()
 
-        Consensus(
-            converted_model_name_or_path,
-            self.account_id
-        )
+        # Consensus(
+        #     converted_model_name_or_path,
+        #     self.account_id
+        # )
 
 
     def _choose_num_blocks(self) -> int:

@@ -6,6 +6,12 @@ import torch
 from hivemind.proto.runtime_pb2 import CompressionType
 from hivemind.utils import limits
 from hivemind.utils.logging import get_logger
+from hivemind.proto import crypto_pb2
+from hivemind.utils.crypto import Ed25519PrivateKey
+from hivemind.utils.auth import POSAuthorizer
+
+from cryptography.hazmat.primitives.asymmetric import ed25519
+
 from humanfriendly import parse_size
 
 from petals.constants import DTYPE_MAP, PUBLIC_INITIAL_PEERS
@@ -217,12 +223,22 @@ def main():
         # Necessary to prevent the server from freezing after forks
         torch.set_num_threads(1)
 
+    identity_path = args.get('identity_path', None)
+    if identity_path is not None:
+        with open(f"{identity_path}", "rb") as f:
+            data = f.read()
+            key_data = crypto_pb2.PrivateKey.FromString(data).data
+            raw_private_key = ed25519.Ed25519PrivateKey.from_private_bytes(key_data[:32])
+            private_key = Ed25519PrivateKey(private_key=raw_private_key)
+        authorizer = POSAuthorizer(private_key)
+
     server = Server(
         **args,
         host_maddrs=host_maddrs,
         announce_maddrs=announce_maddrs,
         compression=compression,
         max_disk_space=max_disk_space,
+        authorizer=authorizer,
     )
     try:
         server.run()

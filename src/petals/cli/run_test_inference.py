@@ -23,7 +23,8 @@ def main():
   args = parser.parse_args()
 
   # Choose any model available at dashboard.hypertensor.org
-  model_name = "NousResearch/Hermes-3-Llama-3.2-3B"  # This one is fine-tuned Llama 2 (70B)
+  model_name = "bigscience/bloom-560m"  # This one is fine-tuned Llama 2 (70B)
+  # model_name = "NousResearch/Hermes-3-Llama-3.2-3B"  # This one is fine-tuned Llama 2 (70B)
   
   print(model_name)
   # Connect to a distributed network hosting model layers
@@ -38,7 +39,7 @@ def main():
      model_name,
      initial_peers=['/ip4/172.18.250.110/tcp/31330/p2p/12D3KooWBF38f6Y9NE4tMUQRfQ7Yt2HS26hnqUTB88isTZF8bwLs'],
      identity_path="private_key.key"
-    )
+  )
   print("model", model)
 
   outputs = model.generate(inputs, max_new_tokens=12)
