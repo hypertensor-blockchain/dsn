@@ -2,8 +2,7 @@ import asyncio
 import multiprocessing as mp
 from petals.substrate.config import SubstrateConfigCustom
 from petals.substrate.tests.simulations.sim_register_subnet import sim_register_subnet
-from petals.substrate.tests.simulations.sim_activated_subnet import sim_activated_subnet
-from petals.substrate.tests.test_utils import LOCAL_URL, MODEL_PATH, MODEL_MEMORY_MB, TestConsensus, get_substrate_config
+from petals.substrate.tests.test_utils import LOCAL_URL, MODEL_PATH, MODEL_MEMORY_MB, TestConsensus
 
 """
 This test requires a build with a subnet already initialized into the network pallet
@@ -19,13 +18,9 @@ def run_consensus(subnet_node_idx: int, path: str):
     loop = asyncio.get_event_loop()
     print("loop")
 
-    substrate_config = get_substrate_config(subnet_node_idx)
     print("substrate_config")
     consensus = TestConsensus(
       path=path, 
-      account_id=substrate_config.account_id, 
-      # phrase=f"//{str(subnet_node_idx)}", 
-      # url=LOCAL_URL
       substrate=SubstrateConfigCustom(f"//{str(subnet_node_idx)}", LOCAL_URL)
     )
 

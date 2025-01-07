@@ -20,27 +20,25 @@ class Consensus(threading.Thread):
 
   If after, it will begin to validate and or attest epochs
   """
-  def __init__(self, path: str, account_id: str, substrate: SubstrateConfigCustom):
+  def __init__(self, path: str, substrate: SubstrateConfigCustom):
+    print("sarting consensus")
     super().__init__()
     assert path is not None, "path must be specified"
-    assert account_id is not None, "account_id must be specified"
+    assert substrate is not None, "account_id must be specified"
     self.subnet_id = None # Not required in case of not initialized yet
     self.path = path
-    self.account_id = account_id
     self.subnet_accepting_consensus = False
     self.subnet_node_eligible = False
-    # block subnet is initialized
     self.subnet_activated = 9223372036854775807 # max int
     self.last_validated_or_attested_epoch = 0
 
     self.substrate_config = substrate
+    self.account_id = substrate.account_id
 
     # blockchain constants
-    self.epoch_length = int(str(get_epoch_length(SubstrateConfig.interface)))
+    self.epoch_length = int(str(get_epoch_length(self.substrate_config.interface)))
 
-    # delete pickles if exist
-
-    # create clean pickles
+    self.start()
 
   def run(self):
     while True:
@@ -68,7 +66,7 @@ class Consensus(threading.Thread):
 
         # Ensure subnet is activated
         if self.subnet_accepting_consensus == False:
-          activated = self._activate_subnet(block_number)
+          activated = self._activate_subnet()
           if activated == True:
             continue
           else:
@@ -90,6 +88,7 @@ class Consensus(threading.Thread):
             self.subnet_id,
           )
 
+          #  wait until we are submittable
           for node_set in submittable_nodes:
             if node_set.account_id == self.account_id:
               self.subnet_node_eligible = True
@@ -103,8 +102,10 @@ class Consensus(threading.Thread):
         # is epoch submitted yet
 
         # is validator?
+        print("is validator?")
         validator = self._get_validator(epoch)
 
+        # a validator is not chosen if there are not enough nodes, or the subnet is deactivated
         if validator == None:
           logger.info("Validator not chosen for epoch %s yet, checking next block" % epoch)
           time.sleep(BLOCK_SECS)
@@ -248,68 +249,124 @@ class Consensus(threading.Thread):
     )
     return validator
   
-  def _activate_subnet(self, block_number: int):
+  def _activate_subnet(self):
+    print("_activate_subnet")
     """
-    Attempt to activate subnet within the subnet
+    TODO: optimize this logic
+    Attempt to activate subnet
 
-    Waits for subnet to be activated on-chain
+    Will wait for subnet to be activated
+
+    1. Check if subnet activated
+    2. If not activated, calculate turn to activate based on peer index
+    3. Wait for the turn to activate to pass
 
     Returns:
       bool: True if subnet was successfully activated, False otherwise.
     """
+    print("_activate_subnet self.path", self.path)
+
     subnet_id = get_subnet_id_by_path(self.substrate_config.interface, self.path)
+    print("_activate_subnet subnet_id", subnet_id)
+    assert subnet_id is not None, logger.error("Cannot find subnet at path: %s", self.path)
+    
     subnet_data = get_subnet_data(
       self.substrate_config.interface,
       subnet_id
     )
+    print("_activate_subnet subnet_data", subnet_data)
+    assert subnet_data is not None, logger.error("Cannot find subnet at ID: %s", subnet_id)
 
     initialized = int(str(subnet_data['initialized']))
     registration_blocks = int(str(subnet_data['registration_blocks']))
     activation_block = initialized + registration_blocks
 
+    # if we didn't activate the subnet, someone indexed before us should have - see logic below
     if subnet_data['activated'] > 0:
       logger.info("Subnet activated, just getting things set up for consensus...")
       self.subnet_accepting_consensus = True
       self.subnet_id = int(str(subnet_id))
       self.subnet_activated = int(str(subnet_data["activated"]))
       return True
-    elif block_number > activation_block and subnet_data['activated'] == 0:
+
+    # the following logic is for registering subnets with nodes waiting to activate the subnet onchain
+
+    # randomize activating subnet by node entry index
+    # when subnet is in registration, all new subnet nodes are ``Submittable`` classification
+    # so we check all submittable nodes
+    submittable_nodes = get_submittable_nodes(
+      self.substrate_config.interface,
+      int(str(subnet_id)),
+    )
+
+    submittable = False
+    n = 0
+    for node_set in submittable_nodes:
+      n+=1
+      if node_set.account_id == self.account_id:
+        submittable = True
+        break
+    
+    # redundant
+    # if we made it this far and the node is not yet activated, the subnet should be activated
+    if not submittable:
+      time.sleep(BLOCK_SECS)
+      self._activate_subnet()
+    
+    min_node_activation_block = activation_block + BLOCK_SECS*10 * (n-1)
+    max_node_activation_block = activation_block + BLOCK_SECS*10 * n
+
+    block_hash = self.substrate_config.interface.get_block_hash()
+    block_number = self.substrate_config.interface.get_block_number(block_hash)
+
+    if block_number < min_node_activation_block or block_number >= max_node_activation_block:
+      # delta = min_node_activation_block - block_number
+      # logger.info(f"Waiting until activation block for {delta} blocks")
+      time.sleep(BLOCK_SECS)
+      self._activate_subnet()
+
+    # Redunant, but if we missed our turn to activate, wait until someone else has to start consensus
+    if block_number >= max_node_activation_block:
+      time.sleep(BLOCK_SECS)
+      self._activate_subnet()
+
+    # if within our designated activation block, then activate
+    # activation is a no-weight transaction, meaning it costs nothing to do
+    if block_number >= min_node_activation_block and block_number < max_node_activation_block:
+      # check if activated already by another node
+      subnet_data = get_subnet_data(
+        self.substrate_config.interface,
+        int(str(subnet_id))
+      )
+
+      if subnet_data['activated'] > 0:
+        self.subnet_accepting_consensus = True
+        self.subnet_id = int(str(subnet_id))
+        self.subnet_activated = True
+        return True
+
       # Attempt to activate subnet
       receipt = activate_subnet(
         self.substrate_config.interface,
         self.substrate_config.keypair,
-        subnet_id,
+        int(str(subnet_id)),
       )
+
+      for event in receipt.triggered_events:
+        print(f'* {event.value}')
+        
       if receipt.is_success:
         self.subnet_accepting_consensus = True
         self.subnet_id = int(str(subnet_id))
         self.subnet_activated = True
         return True
 
-    return False
-
-  # def should_attest(self, validator_data, my_data):
-  #   """Checks if two arrays of dictionaries match, regardless of order."""
-
-  #   if len(validator_data) != len(my_data) and len(validator_data) > 0:
-  #     return False
-
-  #   # use ``asdict`` because data is decoded from blockchain as dataclass
-  #   if is_dataclass(validator_data):
-  #     set1 = set(frozenset(asdict(d).items()) for d in validator_data)
-  #   else:
-  #     set1 = set(frozenset(d.items()) for d in validator_data)
-
-  #   if is_dataclass(my_data):
-  #     set2 = set(frozenset(asdict(d).items()) for d in my_data)
-  #   else:
-  #     set2 = set(frozenset(d.items()) for d in my_data)
-
-  #   intersection = set1.intersection(set2)
-  #   logger.info("Matching intersection of %s validator data" % ((len(intersection))/len(set1) * 100))
-  #   logger.info("Validator matching intersection of %s my data" % ((len(intersection))/len(set2) * 100))
-
-  #   return set1 == set2
+    # check if subnet failed to be activated
+    # this means:
+    # someone else activated it and code miscalculated (contact devs with error if so)
+    # or the subnet didn't meet its activation requirements and should revert on the next ``_activate_subnet`` call
+    time.sleep(BLOCK_SECS)
+    self._activate_subnet()
 
   def should_attest(self, validator_data, my_data):
     """Checks if two arrays of dictionaries match, regardless of order."""

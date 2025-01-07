@@ -1,5 +1,8 @@
 import argparse
 import logging
+from pathlib import Path
+import os
+from dotenv import load_dotenv
 
 import configargparse
 import torch
@@ -16,8 +19,11 @@ from humanfriendly import parse_size
 
 from petals.constants import DTYPE_MAP, PUBLIC_INITIAL_PEERS
 from petals.server.server_validator import Server
+from petals.substrate.config import SubstrateConfigCustom
 from petals.utils.convert_block import QuantType
 from petals.utils.version import validate_version
+
+PHRASE = os.getenv('PHRASE')
 
 logger = get_logger(__name__)
 
@@ -171,9 +177,12 @@ def main():
     parser.add_argument("--adapters", nargs='*', default=(),
                         help="List of pre-loaded LoRA adapters that can be used for inference or training")
 
+    parser.add_argument("--local", action="store_true", help="Run in local mode, uses LOCAL_RPC")
+
     # fmt:on
     args = vars(parser.parse_args())
     args.pop("config", None)
+    local = args.pop("local")
 
     args["converted_model_name_or_path"] = args.pop("model") or args["converted_model_name_or_path"]
 
@@ -232,6 +241,11 @@ def main():
             private_key = Ed25519PrivateKey(private_key=raw_private_key)
         authorizer = POSAuthorizer(private_key)
 
+    if local:
+        rpc = os.getenv('LOCAL_RPC')
+    else:
+        rpc = os.getenv('DEV_RPC')
+
     server = Server(
         **args,
         host_maddrs=host_maddrs,
@@ -239,6 +253,7 @@ def main():
         compression=compression,
         max_disk_space=max_disk_space,
         authorizer=authorizer,
+        substrate=SubstrateConfigCustom(PHRASE, rpc)
     )
     try:
         server.run()

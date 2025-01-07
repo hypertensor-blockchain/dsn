@@ -85,11 +85,10 @@ class TestConsensus(threading.Thread):
 
   If after, it will begin to validate and or attest epochs
   """
-  def __init__(self, path: str, account_id: str, substrate: SubstrateConfigCustom):
+  def __init__(self, path: str, substrate: SubstrateConfigCustom):
     super().__init__()
     self.subnet_id = None # Not required in case of not initialized yet
     self.path = path
-    self.account_id = account_id
     self.subnet_accepting_consensus = False
     self.subnet_node_eligible = False
     self.subnet_initialized = 9223372036854775807 # max int
@@ -97,6 +96,7 @@ class TestConsensus(threading.Thread):
 
     # self.substrate_config = SubstrateConfigCustom(phrase, url)
     self.substrate_config = substrate
+    self.account_id = substrate.account_id
 
     # blockchain constants
     self.epoch_length = int(str(get_epoch_length(self.substrate_config.interface)))
@@ -139,16 +139,10 @@ class TestConsensus(threading.Thread):
         # - Must stake onchain
         # - Must be Submittable subnet node class
         if self.subnet_node_eligible == False:
-          # submittable_nodes = get_subnet_nodes_submittable(
-          #   self.substrate_config.interface,
-          #   self.subnet_id,
-          # )
-          print("self.account_id: \n", self.account_id)
           submittable_nodes = get_submittable_nodes(
             self.substrate_config.interface,
             self.subnet_id,
           )
-          print("submittable_nodes: \n", submittable_nodes)
 
           for node_set in submittable_nodes:
             if node_set.account_id == self.account_id:

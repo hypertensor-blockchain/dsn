@@ -60,7 +60,6 @@ class Server:
         self,
         *,
         initial_peers: List[str],
-        # account_id: str,
         dht_prefix: Optional[str],
         converted_model_name_or_path: str,
         public_name: Optional[str] = None,
@@ -104,7 +103,8 @@ class Server:
         **kwargs,
     ):
         """Create a server with one or more bloom blocks. See run_server.py for documentation."""
-        print("Server authorizer", authorizer)
+        substrate = kwargs.pop('substrate')
+
         self.is_validator = False
 
         converted_model_name_or_path = get_compatible_model_repo(converted_model_name_or_path)
@@ -300,11 +300,7 @@ class Server:
         self.module_container = None
         self.stop = threading.Event()
 
-        # Consensus(
-        #     converted_model_name_or_path,
-        #     self.account_id
-        # )
-
+        Consensus(converted_model_name_or_path, substrate)
 
     def _choose_num_blocks(self) -> int:
         assert self.device.type in ("cuda", "mps"), (
