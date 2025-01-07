@@ -1,19 +1,8 @@
 import argparse
-import logging
-
-import configargparse
-import torch
-from hivemind.proto.runtime_pb2 import CompressionType
-from hivemind.utils import limits
 from hivemind.utils.logging import get_logger
-from humanfriendly import parse_size
 
-from petals.constants import DTYPE_MAP, PUBLIC_INITIAL_PEERS
-from petals.server.server import Server
 from petals.substrate.chain_functions import register_subnet_node
 from petals.substrate.config import SubstrateConfig
-from petals.utils.convert_block import QuantType
-from petals.utils.version import validate_version
 
 logger = get_logger(__name__)
 
@@ -51,7 +40,12 @@ def main():
             None,
             None
         )
-        logger.info(receipt)
+        if receipt.is_success:
+            print('✅ Success, triggered events:')
+            for event in receipt.triggered_events:
+                print(f'* {event.value}')
+        else:
+            print('⚠️ Extrinsic Failed: ', receipt.error_message)
     except Exception as e:
         logger.error("Error: ", e, exc_info=True)
 

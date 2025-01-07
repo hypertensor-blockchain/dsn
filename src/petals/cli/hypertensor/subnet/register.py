@@ -35,7 +35,12 @@ def main():
             memory_mb,
             registration_blocks
         )
-        logger.info(receipt)
+        if receipt.is_success:
+            print('✅ Success, triggered events:')
+            for event in receipt.triggered_events:
+                print(f'* {event.value}')
+        else:
+            print('⚠️ Extrinsic Failed: ', receipt.error_message)
     except Exception as e:
         logger.error("Error: ", e, exc_info=True)
 

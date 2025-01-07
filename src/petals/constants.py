@@ -12,7 +12,10 @@ import torch
 #     "/ip4/159.203.156.48/tcp/31338/p2p/QmQGTqmM7NKjV6ggU1ZCap8zWiyKR89RViDXiqehSiCpY5",
 # ]
 
-PUBLIC_INITIAL_PEERS = []
+PUBLIC_INITIAL_PEERS = [
+    "/ip4/3.128.33.192/tcp/31330/p2p/12D3KooWL7pumAq4P2hLdNWUDUFGwJqGQgq1YdAfr52wqpFHcdQa"
+]
+
 
 # The reachability API is currently used only when connecting to the public swarm
 REACHABILITY_API_URL = "https://dashboard.hypertensor.org"
