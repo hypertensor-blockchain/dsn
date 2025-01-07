@@ -7,17 +7,13 @@ from petals.substrate.chain_data import SubnetNode
 from petals.substrate.chain_functions import get_subnet_nodes_included, get_subnet_nodes_submittable
 from petals.substrate.config import PERCENTAGE_EPOCH_HEALTH_CONSENSUS_RECHECK
 from substrateinterface import SubstrateInterface
-from petals.health.state_updater import StateUpdaterThreadV2
+from petals.health.state_updater import get_peers_scores
+from hivemind.utils.auth import AuthorizerBase
 
-from petals.constants import PUBLIC_INITIAL_PEERS
-import hivemind
-
-dht = hivemind.DHT(initial_peers=PUBLIC_INITIAL_PEERS, client_mode=True, num_workers=32, start=True)
-
-state_updater = StateUpdaterThreadV2(dht)
-
+# TODO: Clean this function up big time
 def get_blockchain_peers_consensus_data(
   blockchain_validators: List,
+  authorizer: AuthorizerBase
 ) -> Dict:
   """
   :param blockchain_validators: List of blockchain peers
@@ -27,7 +23,7 @@ def get_blockchain_peers_consensus_data(
   """If model is broken it can return `None`"""
   # peers_data = get_peers_data()
 
-  peers_data = state_updater.run()
+  peers_data = get_peers_scores(authorizer)
 
   """
   If model is broken then send back `model_state` as broken with a blank `peers` array
@@ -168,15 +164,18 @@ def get_score(x: int, peers: int, blocks_per_layer: int, total_blocks: int) -> i
   y = int((k * share * share + share) * 1e18)
   return y
 
-def get_consensus_data(substrate: SubstrateInterface, subnet_id: int) -> Dict:
+def get_consensus_data(substrate: SubstrateInterface, subnet_id: int, authorizer: AuthorizerBase) -> Dict:
   result = get_subnet_nodes_included(
     substrate,
     subnet_id
   )
 
+  if result is None:
+    return {}
+
   subnet_nodes_data = SubnetNode.list_from_vec_u8(result["result"])
 
-  consensus_data = get_blockchain_peers_consensus_data(subnet_nodes_data)
+  consensus_data = get_blockchain_peers_consensus_data(subnet_nodes_data, authorizer)
 
   return consensus_data
 

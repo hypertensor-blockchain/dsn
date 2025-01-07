@@ -1,9 +1,12 @@
-from dataclasses import asdict, is_dataclass
+from dataclasses import asdict
 import threading
 import time
+
+from hivemind.utils.auth import AuthorizerBase
+
 from petals.substrate.chain_data import RewardsData
 from petals.substrate.chain_functions import activate_subnet, attest, get_epoch_length, get_subnet_data, get_subnet_id_by_path, get_rewards_submission, get_rewards_validator, validate
-from petals.substrate.config import BLOCK_SECS, SubstrateConfig, SubstrateConfigCustom
+from petals.substrate.config import BLOCK_SECS, SubstrateConfigCustom
 from petals.substrate.utils import get_consensus_data, get_next_epoch_start_block, get_submittable_nodes
 from hivemind.utils import get_logger
 
@@ -20,7 +23,7 @@ class Consensus(threading.Thread):
 
   If after, it will begin to validate and or attest epochs
   """
-  def __init__(self, path: str, substrate: SubstrateConfigCustom):
+  def __init__(self, path: str, authorizer: AuthorizerBase, substrate: SubstrateConfigCustom):
     super().__init__()
     assert path is not None, "path must be specified"
     assert substrate is not None, "account_id must be specified"
@@ -30,6 +33,7 @@ class Consensus(threading.Thread):
     self.subnet_node_eligible = False
     self.subnet_activated = 9223372036854775807 # max int
     self.last_validated_or_attested_epoch = 0
+    self.authorizer = authorizer
 
     self.substrate_config = substrate
     self.account_id = substrate.account_id
@@ -219,7 +223,7 @@ class Consensus(threading.Thread):
     
   def _get_consensus_data(self):
     """"""
-    consensus_data = get_consensus_data(self.substrate_config.interface, self.subnet_id)
+    consensus_data = get_consensus_data(self.substrate_config.interface, self.subnet_id, self.authorizer)
     return consensus_data
 
   def _get_validator_consensus_submission(self, epoch: int):

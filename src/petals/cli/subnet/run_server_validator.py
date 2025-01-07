@@ -11,7 +11,7 @@ from hivemind.utils import limits
 from hivemind.utils.logging import get_logger
 from hivemind.proto import crypto_pb2
 from hivemind.utils.crypto import Ed25519PrivateKey
-from hivemind.utils.auth import POSAuthorizer
+from hivemind.utils.auth import POSAuthorizer, POSAuthorizerLive
 
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
@@ -19,9 +19,12 @@ from humanfriendly import parse_size
 
 from petals.constants import DTYPE_MAP, PUBLIC_INITIAL_PEERS
 from petals.server.server_validator import Server
+from petals.substrate.chain_functions import get_subnet_id_by_path
 from petals.substrate.config import SubstrateConfigCustom
 from petals.utils.convert_block import QuantType
 from petals.utils.version import validate_version
+
+load_dotenv(os.path.join(Path.cwd(), '.env'))
 
 PHRASE = os.getenv('PHRASE')
 
@@ -232,6 +235,13 @@ def main():
         # Necessary to prevent the server from freezing after forks
         torch.set_num_threads(1)
 
+    if local:
+        rpc = os.getenv('LOCAL_RPC')
+    else:
+        rpc = os.getenv('DEV_RPC')
+
+    substrate = SubstrateConfigCustom(PHRASE, rpc)
+
     identity_path = args.get('identity_path', None)
     if identity_path is not None:
         with open(f"{identity_path}", "rb") as f:
@@ -239,12 +249,13 @@ def main():
             key_data = crypto_pb2.PrivateKey.FromString(data).data
             raw_private_key = ed25519.Ed25519PrivateKey.from_private_bytes(key_data[:32])
             private_key = Ed25519PrivateKey(private_key=raw_private_key)
-        authorizer = POSAuthorizer(private_key)
+        # authorizer = POSAuthorizer(private_key)
 
-    if local:
-        rpc = os.getenv('LOCAL_RPC')
-    else:
-        rpc = os.getenv('DEV_RPC')
+        subnet_id = get_subnet_id_by_path(
+            substrate.interface, 
+            args["converted_model_name_or_path"]
+        )
+        authorizer = POSAuthorizerLive(private_key, int(str(subnet_id)), substrate)
 
     server = Server(
         **args,
@@ -253,7 +264,7 @@ def main():
         compression=compression,
         max_disk_space=max_disk_space,
         authorizer=authorizer,
-        substrate=SubstrateConfigCustom(PHRASE, rpc)
+        substrate=substrate
     )
     try:
         server.run()

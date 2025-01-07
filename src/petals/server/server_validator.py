@@ -103,10 +103,11 @@ class Server:
         **kwargs,
     ):
         """Create a server with one or more bloom blocks. See run_server.py for documentation."""
-        substrate = kwargs.pop('substrate')
+        self.substrate = kwargs.pop('substrate')
 
         self.is_validator = False
 
+        self.path = converted_model_name_or_path
         converted_model_name_or_path = get_compatible_model_repo(converted_model_name_or_path)
         self.converted_model_name_or_path = converted_model_name_or_path
 
@@ -149,6 +150,8 @@ class Server:
             for block_index in range(self.block_config.num_hidden_layers)
         ]
 
+        self.authorizer = authorizer
+
         if reachable_via_relay is None:
             is_reachable = check_direct_reachability(
                 initial_peers=initial_peers, 
@@ -166,7 +169,6 @@ class Server:
             use_auto_relay=use_auto_relay,
             client_mode=reachable_via_relay,
             **dict(kwargs, authorizer=authorizer)
-            # **kwargs,
         )
         self.reachability_protocol = ReachabilityProtocol.attach_to_dht(self.dht) if not reachable_via_relay else None
 
@@ -300,7 +302,10 @@ class Server:
         self.module_container = None
         self.stop = threading.Event()
 
-        Consensus(converted_model_name_or_path, substrate)
+        self.run_consensus()
+
+    def run_consensus(self):
+        Consensus(self.path, self.authorizer, self.substrate)
 
     def _choose_num_blocks(self) -> int:
         assert self.device.type in ("cuda", "mps"), (
@@ -357,27 +362,6 @@ class Server:
         return num_blocks
 
     def run(self):
-        # try:
-        #     with open(f"{self.identity_path}", "rb") as f:
-        #         data = f.read()
-        #         key_data = crypto_pb2.PrivateKey.FromString(data).data
-        #         raw_private_key = ed25519.Ed25519PrivateKey.from_private_bytes(key_data[:32])
-        #         private_key = Ed25519PrivateKey(private_key=raw_private_key)
-
-        #     self.inference_validator = InferenceValidator(
-        #         self,
-        #         self.converted_model_name_or_path,
-        #         self.block_config.num_hidden_layers,
-        #         self.dht,
-        #         self.num_blocks,
-        #         POSAuthorizer(private_key),
-        #         self.identity_path,
-        #         True,
-        #     )
-        #     logger.info("Server InferenceValidator success")
-        # except Exception as e:
-        #     logger.error("Server InferenceValidator Error: " + str(e))
-
         while True:
             block_indices = self._choose_blocks()
             self.module_container = ModuleContainer.create(

@@ -9,16 +9,10 @@ from typing import Optional
 import hivemind
 from hivemind.utils.auth import AuthorizerBase
 
-import simplejson
-
 from petals.constants import TEMP_INITIAL_PEERS_LOCATION
-# from flask import Flask, render_template
 
-# import config
 from .config import *
-# from .health_v1 import fetch_health_state
 from .health_v2 import fetch_health_state2, get_online_peers, get_online_peers_data, get_online_peers_data_await
-from .metrics import get_prometheus_metrics
 
 logger = hivemind.get_logger(__name__)
 
@@ -120,7 +114,7 @@ def get_peer_ids_list():
     except Exception as error:
         logger.error("Failed to get peers list:", error)
         return None
-    
+
 def get_peers_data_list(authorizer: Optional[AuthorizerBase] = None):
     try:
         initial_peers = INITIAL_PEERS
@@ -151,6 +145,36 @@ def get_peers_data_list(authorizer: Optional[AuthorizerBase] = None):
         logger.error("Failed to get peers list:", error)
         return None
     
+def get_peers_scores(authorizer: Optional[AuthorizerBase] = None):
+    try:
+        initial_peers = INITIAL_PEERS
+        if initial_peers is None or len(initial_peers) == 0:
+            try:
+                """
+                In the case where the first node has no ``initial_peers`` we can use themselves as the initial peer
+                if they are hosting the entire model, otherwise they will need to wait for others to join
+                """
+                f = open(TEMP_INITIAL_PEERS_LOCATION, "r")
+                f_initial_peers = f.read()
+                f_initial_peers_literal_eval = literal_eval(f_initial_peers)
+                f_initial_peers_tuple = tuple(f_initial_peers_literal_eval)
+                initial_peers = f_initial_peers_tuple
+            except Exception as e:
+                logger.error("TEMP_INITIAL_PEERS_LOCATION error: %s" % e)
+
+        dht = hivemind.DHT(
+            initial_peers=initial_peers, 
+            client_mode=True, 
+            num_workers=32, 
+            start=True,
+            authorizer=authorizer
+        )
+        state_dict = fetch_health_state2(dht)
+        return state_dict
+    except Exception as error:
+        logger.error("Failed to get peers list:", error)
+        return None
+
 
 def get_peers_data_list_with_dht(dht: hivemind.DHT):
     try:

@@ -1,17 +1,11 @@
-import asyncio
-from concurrent.futures import Future
 import datetime
-import threading
 import time
-from collections import Counter
-from contextlib import suppress
 from dataclasses import asdict
 from functools import partial
 from typing import List
 
 import hivemind
 import numpy as np
-# from multiaddr import Multiaddr
 from hivemind.p2p.multiaddr import Multiaddr
 from petals.data_structures import UID_DELIMITER, ServerState
 from petals.utils.dht import compute_spans, get_remote_module_infos
@@ -19,7 +13,6 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 
 # import config
 from .config import *
-from .data_structures import ModelInfo
 from .p2p_utils import check_reachability_parallel, get_peers_ips, extract_peer_ip_info
 
 logger = hivemind.get_logger(__name__)
@@ -29,7 +22,8 @@ def fetch_health_state2(dht: hivemind.DHT) -> dict:
     try:
         start_time = time.perf_counter()
         bootstrap_peer_ids = []
-        for addr in INITIAL_PEERS:
+        visible_maddrs_str = dht.initial_peers
+        for addr in visible_maddrs_str:
             peer_id = hivemind.PeerID.from_base58(Multiaddr(addr)["p2p"])
             if peer_id not in bootstrap_peer_ids:
                 bootstrap_peer_ids.append(peer_id)

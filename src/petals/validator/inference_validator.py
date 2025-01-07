@@ -10,7 +10,7 @@ import multiprocessing as mp
 from petals.validator.config import AccountantData, AccountantDataPeerParams, PeerInferenceResults, PeerInferenceSequenceData, PeerValidationData
 # from petals.validator.routing.sequence_manager import MissingBlocksError
 # from petals.data_structures import RemoteSpanInfo
-from petals.health.state_updater import get_peers_data_list, get_peers_data_list_with_dht
+from petals.health.state_updater import get_peers_data_list
 # from petals.substrate.chain_functions import propose_model_peer_dishonest, vote_model_peer_dishonest
 from petals.utils.auto_config import AutoDistributedModelForCausalLMValidator
 # from petals.substrate import config as substrate_config

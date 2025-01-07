@@ -20,7 +20,7 @@ from hivemind.proto import runtime_pb2
 from hivemind.utils.logging import get_logger
 from hivemind.proto import crypto_pb2
 from hivemind.utils.crypto import Ed25519PrivateKey
-from hivemind.utils.auth import POSAuthorizer
+from hivemind.utils.auth import POSAuthorizer, POSAuthorizerLive
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
 from petals.client.config import ClientConfig
@@ -28,9 +28,20 @@ from petals.client.routing.sequence_info import RemoteSequenceInfo
 from petals.client.routing.spending_policy import NoSpendingPolicy
 from petals.data_structures import ModuleUID, RemoteSpanInfo, ServerState
 from petals.server.handler import TransformerConnectionHandler
+from petals.substrate.config import SubstrateConfigCustom
 from petals.utils.dht import get_remote_module_infos
 from petals.utils.ping import PingAggregator
 from petals.utils.random import sample_up_to
+
+from pathlib import Path
+import os
+from dotenv import load_dotenv
+
+load_dotenv(os.path.join(Path.cwd(), '.env'))
+
+SUBNET_ID = os.getenv('SUBNET_ID')
+PHRASE = os.getenv('PHRASE')
+RPC = os.getenv('DEV_RPC')
 
 logger = get_logger(__name__)
 
@@ -97,13 +108,15 @@ class RemoteSequenceManager:
                 raw_private_key = ed25519.Ed25519PrivateKey.from_private_bytes(key_data[:32])
                 private_key = Ed25519PrivateKey(private_key=raw_private_key)
 
+            #TODO: streamline the authorizer instead of pulling from ``.env``
             dht = DHT(
                 initial_peers=config.initial_peers,
                 client_mode=True,
                 num_workers=32,
                 startup_timeout=config.daemon_startup_timeout,
                 start=True,
-                authorizer=POSAuthorizer(private_key)
+                authorizer=POSAuthorizerLive(private_key, SUBNET_ID, SubstrateConfigCustom(PHRASE, RPC))
+                # authorizer=POSAuthorizer(private_key)
             )
         assert isinstance(dht, DHT) and dht.is_alive(), "`dht` must be a running hivemind.DHT instance"
         self.dht = dht
