@@ -21,7 +21,6 @@ class Consensus(threading.Thread):
   If after, it will begin to validate and or attest epochs
   """
   def __init__(self, path: str, substrate: SubstrateConfigCustom):
-    print("sarting consensus")
     super().__init__()
     assert path is not None, "path must be specified"
     assert substrate is not None, "account_id must be specified"
@@ -102,7 +101,6 @@ class Consensus(threading.Thread):
         # is epoch submitted yet
 
         # is validator?
-        print("is validator?")
         validator = self._get_validator(epoch)
 
         # a validator is not chosen if there are not enough nodes, or the subnet is deactivated
@@ -194,7 +192,6 @@ class Consensus(threading.Thread):
       return None
     
   def _do_validate(self, data):
-    print("_do_validate")
     try:
       receipt = validate(
         self.substrate_config.interface,
@@ -208,7 +205,6 @@ class Consensus(threading.Thread):
       return None
 
   def _do_attest(self):
-    print("_do_attest")
     try:
       receipt = attest(
         self.substrate_config.interface,
@@ -250,7 +246,6 @@ class Consensus(threading.Thread):
     return validator
   
   def _activate_subnet(self):
-    print("_activate_subnet")
     """
     TODO: optimize this logic
     Attempt to activate subnet
@@ -264,17 +259,13 @@ class Consensus(threading.Thread):
     Returns:
       bool: True if subnet was successfully activated, False otherwise.
     """
-    print("_activate_subnet self.path", self.path)
-
     subnet_id = get_subnet_id_by_path(self.substrate_config.interface, self.path)
-    print("_activate_subnet subnet_id", subnet_id)
     assert subnet_id is not None, logger.error("Cannot find subnet at path: %s", self.path)
     
     subnet_data = get_subnet_data(
       self.substrate_config.interface,
       subnet_id
     )
-    print("_activate_subnet subnet_data", subnet_data)
     assert subnet_data is not None, logger.error("Cannot find subnet at ID: %s", subnet_id)
 
     initialized = int(str(subnet_data['initialized']))
