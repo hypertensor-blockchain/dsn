@@ -12,15 +12,18 @@ This test requires a build with a subnet already initialized into the network pa
 # python src/petals/substrate/tests/simulations/sim_register_subnet.py
 
 def sim_register_subnet(path: str, memory_mb: int):
-  # register subnet
-  test_register_subnet(path, memory_mb)
-  # add nodes
   substrate_config = get_substrate_config(0)
+
   minimum_subnet_nodes = get_minimum_subnet_nodes(
     substrate_config.interface,
     memory_mb,
   )
   minimum_subnet_nodes = minimum_subnet_nodes['result']
+  print("minimum_subnet_nodes", minimum_subnet_nodes)
+
+  # register subnet
+  test_register_subnet(path, memory_mb, minimum_subnet_nodes)
+  # add nodes
   test_add_subnet_nodes(minimum_subnet_nodes, path)
 
   # add delegate stake balance

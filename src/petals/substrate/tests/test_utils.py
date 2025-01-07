@@ -97,6 +97,7 @@ class TestConsensus(threading.Thread):
     # self.substrate_config = SubstrateConfigCustom(phrase, url)
     self.substrate_config = substrate
     self.account_id = substrate.account_id
+    print("TestConsensus __init__ account_id", self.account_id)
 
     # blockchain constants
     self.epoch_length = int(str(get_epoch_length(self.substrate_config.interface)))
@@ -113,7 +114,7 @@ class TestConsensus(threading.Thread):
         logger.info("Last Validated Epoch: %s " % self.last_validated_or_attested_epoch)
 
         # skip if already validated or attested epoch
-        if epoch <= self.last_validated_or_attested_epoch:
+        if epoch <= self.last_validated_or_attested_epoch and self.subnet_accepting_consensus:
           logger.info("Already completed epoch: %s, waiting for the next " % epoch)
           time.sleep(BLOCK_SECS)
           continue
@@ -373,24 +374,28 @@ class TestConsensus(threading.Thread):
     Returns:
       bool: True if subnet was successfully activated, False otherwise.
     """
+    print("_activate_subnet path", self.path)
     subnet_id = get_subnet_id_by_path(self.substrate_config.interface, self.path)
     print("_activate_subnet subnet_id", subnet_id)
-    assert subnet_id is not None, logger.error("Cannot find subnet at path: %s", self.path)
+    assert subnet_id is not None or subnet_id is not 'None', logger.error("Cannot find subnet at path: %s", self.path)
     
     subnet_data = get_subnet_data(
       self.substrate_config.interface,
       subnet_id
     )
     print("_activate_subnet subnet_data", subnet_data)
-    assert subnet_data is not None, logger.error("Cannot find subnet at ID: %s", subnet_id)
+    assert subnet_data is not None or subnet_data is not 'None', logger.error("Cannot find subnet at ID: %s", subnet_id)
 
     initialized = int(str(subnet_data['initialized']))
     registration_blocks = int(str(subnet_data['registration_blocks']))
     activation_block = initialized + registration_blocks
 
+    print("_activate_subnet initialized", initialized)
+    print("_activate_subnet activation_block", activation_block)
+
     # if we didn't activate the node, someone indexed before us should have - see logic below
     if subnet_data['activated'] > 0:
-      logger.info("Subnet activated, just getting things set up for consensus...")
+      logger.info("Subnet activated, just getting set up for consensus...")
       self.subnet_accepting_consensus = True
       self.subnet_id = int(str(subnet_id))
       self.subnet_activated = int(str(subnet_data["activated"]))
@@ -473,8 +478,10 @@ class TestConsensus(threading.Thread):
     # this means:
     # someone else activated it and code miscalculated (contact devs with error if so)
     # or the subnet didn't meet its activation requirements and should revert on the next ``_activate_subnet`` call
-    time.sleep(BLOCK_SECS)
-    self._activate_subnet()
+    # time.sleep(BLOCK_SECS)
+    # self._activate_subnet()
+
+    return False
 
   def should_attest(self, validator_data, my_data):
     print("should_attest")

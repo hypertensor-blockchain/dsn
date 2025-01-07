@@ -58,19 +58,20 @@ class Consensus(threading.Thread):
         remaining_blocks_until_next_epoch = next_epoch_start_block - block_number
         
         # skip if already validated or attested epoch
-        if epoch <= self.last_validated_or_attested_epoch:
+        if epoch <= self.last_validated_or_attested_epoch and self.subnet_accepting_consensus:
           logger.info("Already completed epoch: %s, waiting for the next " % epoch)
           time.sleep(remaining_blocks_until_next_epoch * BLOCK_SECS)
           continue
 
         # Ensure subnet is activated
         if self.subnet_accepting_consensus == False:
+          logger.info("Waiting for subnet activation")
           activated = self._activate_subnet()
           if activated == True:
             continue
           else:
             # Sleep until voting is complete
-            time.sleep(remaining_blocks_until_next_epoch * BLOCK_SECS)
+            time.sleep(BLOCK_SECS)
             continue
 
         """
@@ -247,7 +248,7 @@ class Consensus(threading.Thread):
   
   def _activate_subnet(self):
     """
-    TODO: optimize this logic
+    TODO: optimize this logic and add proper logic for deactivation if subnet isn't able to be activated
     Attempt to activate subnet
 
     Will wait for subnet to be activated
@@ -264,7 +265,7 @@ class Consensus(threading.Thread):
     
     subnet_data = get_subnet_data(
       self.substrate_config.interface,
-      subnet_id
+      int(str(subnet_id))
     )
     assert subnet_data is not None, logger.error("Cannot find subnet at ID: %s", subnet_id)
 
@@ -356,8 +357,7 @@ class Consensus(threading.Thread):
     # this means:
     # someone else activated it and code miscalculated (contact devs with error if so)
     # or the subnet didn't meet its activation requirements and should revert on the next ``_activate_subnet`` call
-    time.sleep(BLOCK_SECS)
-    self._activate_subnet()
+    return False
 
   def should_attest(self, validator_data, my_data):
     """Checks if two arrays of dictionaries match, regardless of order."""
