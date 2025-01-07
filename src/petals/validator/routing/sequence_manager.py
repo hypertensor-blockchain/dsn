@@ -133,7 +133,7 @@ class RemoteSequenceManager:
                 num_workers=32,
                 startup_timeout=config.daemon_startup_timeout,
                 start=True,
-                authorizer=POSAuthorizerLive(private_key, SUBNET_ID, SubstrateConfigCustom(PHRASE, RPC))
+                authorizer=POSAuthorizerLive(private_key, SUBNET_ID, SubstrateConfigCustom(PHRASE, RPC).interface)
                 # authorizer=POSAuthorizer(private_key)
             )
         assert isinstance(dht, DHT) and dht.is_alive(), "`dht` must be a running hivemind.DHT instance"

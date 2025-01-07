@@ -184,7 +184,7 @@ class Server:
         # all_peers = initial_peers + PUBLIC_INITIAL_PEERS
         all_peers = list(set(all_peers))
 
-        f = open(TEMP_INITIAL_PEERS_LOCATION, "w")
+        f = open(TEMP_INITIAL_PEERS_LOCATION, "w+")
         f.write(str(all_peers))
 
         if device is None:

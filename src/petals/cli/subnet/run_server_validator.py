@@ -255,7 +255,7 @@ def main():
             substrate.interface, 
             args["converted_model_name_or_path"]
         )
-        authorizer = POSAuthorizerLive(private_key, int(str(subnet_id)), substrate)
+        authorizer = POSAuthorizerLive(private_key, int(str(subnet_id)), substrate.interface)
 
     server = Server(
         **args,
