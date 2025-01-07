@@ -47,8 +47,6 @@ from petals.utils.random import sample_up_to
 from petals.utils.version import get_compatible_model_repo
 from petals.validator.inference_validator import InferenceValidator
 
-from hivemind.dht.routing import DHTID
-
 logger = get_logger(__name__)
 
 
@@ -121,10 +119,14 @@ class Server:
         if custom_module_path is not None:
             add_custom_models_from_file(custom_module_path)
 
+        identity_path = kwargs.get('identity_path', None)
+
+        # identity_path is not needed here but we pass it anyway to avoid logging
         self.block_config = AutoDistributedConfig.from_pretrained(
             converted_model_name_or_path,
             use_auth_token=token,
             revision=revision,
+            identity_path=identity_path,
         )
 
         if dht_prefix is None:

@@ -118,10 +118,13 @@ class Server:
         if custom_module_path is not None:
             add_custom_models_from_file(custom_module_path)
 
+        identity_path = kwargs.get('identity_path', None)
+
         self.block_config = AutoDistributedConfig.from_pretrained(
             converted_model_name_or_path,
             use_auth_token=token,
             revision=revision,
+            identity_path=identity_path,
         )
 
         if dht_prefix is None:
@@ -144,7 +147,6 @@ class Server:
             for block_index in range(self.block_config.num_hidden_layers)
         ]
 
-        identity_path = kwargs.get('identity_path', None)
         with open(f"{identity_path}", "rb") as f:
             data = f.read()
             key_data = crypto_pb2.PrivateKey.FromString(data).data
