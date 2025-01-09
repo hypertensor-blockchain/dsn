@@ -60,10 +60,31 @@ class StateUpdaterThread(threading.Thread):
     #             logger.warning("Update took more than update_period, consider increasing it")
     #         time.sleep(max(delay, 0))
 
-class StateUpdaterThreadV2():
-    def __init__(self, dht: hivemind.DHT, **kwargs):
+class ScoringProtocol():
+    def __init__(self, authorizer: AuthorizerBase, **kwargs):
         super().__init__(**kwargs)
-        self.dht = dht
+        initial_peers = INITIAL_PEERS
+        if initial_peers is None or len(initial_peers) == 0:
+            try:
+                """
+                In the case where the first node has no ``initial_peers`` we can use themselves as the initial peer
+                if they are hosting the entire model, otherwise they will need to wait for others to join
+                """
+                f = open(TEMP_INITIAL_PEERS_LOCATION, "r")
+                f_initial_peers = f.read()
+                f_initial_peers_literal_eval = literal_eval(f_initial_peers)
+                f_initial_peers_tuple = tuple(f_initial_peers_literal_eval)
+                initial_peers = f_initial_peers_tuple
+            except Exception as e:
+                logger.error("TEMP_INITIAL_PEERS_LOCATION error: %s" % e)
+
+        self.dht = hivemind.DHT(
+            initial_peers=initial_peers, 
+            client_mode=True, 
+            num_workers=32, 
+            start=True,
+            authorizer=authorizer
+        )
 
     def run(self):
         try:
@@ -156,11 +177,12 @@ def get_peers_scores(authorizer: Optional[AuthorizerBase] = None):
                 """
                 f = open(TEMP_INITIAL_PEERS_LOCATION, "r")
                 f_initial_peers = f.read()
+                print("f_initial_peers", f_initial_peers)
                 f_initial_peers_literal_eval = literal_eval(f_initial_peers)
                 f_initial_peers_tuple = tuple(f_initial_peers_literal_eval)
                 initial_peers = f_initial_peers_tuple
             except Exception as e:
-                logger.error("TEMP_INITIAL_PEERS_LOCATION error: %s" % e)
+                logger.error("TEMP_INITIAL_PEERS_LOCATION error: %s" % e, exc_info=True)
 
         dht = hivemind.DHT(
             initial_peers=initial_peers, 

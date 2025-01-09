@@ -13,7 +13,6 @@ import torch
 # ]
 
 PUBLIC_INITIAL_PEERS = [
-    "/ip4/3.128.33.192/tcp/31330/p2p/12D3KooWL7pumAq4P2hLdNWUDUFGwJqGQgq1YdAfr52wqpFHcdQa"
 ]
 
 

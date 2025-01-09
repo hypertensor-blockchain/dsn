@@ -1,18 +1,19 @@
 from dataclasses import asdict
-import threading
 import time
 
 from hivemind.utils.auth import AuthorizerBase
 
+from petals.health.state_updater import ScoringProtocol
 from petals.substrate.chain_data import RewardsData
 from petals.substrate.chain_functions import activate_subnet, attest, get_epoch_length, get_subnet_data, get_subnet_id_by_path, get_rewards_submission, get_rewards_validator, validate
 from petals.substrate.config import BLOCK_SECS, SubstrateConfigCustom
 from petals.substrate.utils import get_consensus_data, get_next_epoch_start_block, get_submittable_nodes
 from hivemind.utils import get_logger
+import gc
 
 logger = get_logger(__name__)
 
-class Consensus(threading.Thread):
+class Consensus():
   """
   Houses logic for validating and attesting consensus data per epochs for rewards
 
@@ -41,11 +42,14 @@ class Consensus(threading.Thread):
     # blockchain constants
     self.epoch_length = int(str(get_epoch_length(self.substrate_config.interface)))
 
-    self.start()
+    # initialize DHT client for scoring protocol
+    self.scoring_protocol = ScoringProtocol(self.authorizer)
+
+    # self.start()
+    self.run()
 
   def run(self):
     while True:
-      """"""
       try:
         # get epoch
         block_hash = self.substrate_config.interface.get_block_hash()
@@ -165,6 +169,7 @@ class Consensus(threading.Thread):
 
   def validate(self):
     """Get rewards data and submit consensus"""
+    # TODO: Add exception handling
     consensus_data = self._get_consensus_data()
     self._do_validate(consensus_data["peers"])
 
@@ -223,7 +228,12 @@ class Consensus(threading.Thread):
     
   def _get_consensus_data(self):
     """"""
-    consensus_data = get_consensus_data(self.substrate_config.interface, self.subnet_id, self.authorizer)
+    # TODO: Add exception handling
+    consensus_data = get_consensus_data(
+      self.substrate_config.interface, 
+      self.subnet_id, 
+      self.scoring_protocol
+    )
     return consensus_data
 
   def _get_validator_consensus_submission(self, epoch: int):

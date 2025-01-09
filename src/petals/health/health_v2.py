@@ -48,6 +48,7 @@ def fetch_health_state2(dht: hivemind.DHT) -> dict:
         offset += model.num_blocks
 
         online_servers = [peer_id for peer_id, span in all_servers.items() if span.state == ServerState.ONLINE]
+        print("online_servers", online_servers)
 
         reach_infos.update(dht.run_coroutine(partial(check_reachability_parallel, online_servers, fetch_info=True)))
         peers_info = {str(peer.peer_id): {"location": extract_peer_ip_info(str(peer.addrs[0])), "multiaddrs": [str(multiaddr) for multiaddr in peer.addrs]} for peer in dht.run_coroutine(get_peers_ips)}
@@ -61,15 +62,10 @@ def fetch_health_state2(dht: hivemind.DHT) -> dict:
             reachable = reach_infos[peer_id]["ok"] if peer_id in reach_infos else True
             state = span.state.name.lower() if reachable else "unreachable"
 
-            # Get staking data
-            amount_staked = 1000e18
-
             # only append online model validators
-            if state == "online" and amount_staked >= min_amount_staked:
+            if state == "online":
                 block_healthy[span.start : span.end] = True
                 peer_num_blocks = span.length
-                throughput = span.throughput
-
                 """
                     Using relay shows whether a server is reachable directly or we need to 
                     use libp2p relays to traverse NAT/firewalls and reach it. Servers 
@@ -94,7 +90,6 @@ def fetch_health_state2(dht: hivemind.DHT) -> dict:
                     the blockchains scoring mechanism is arbitrary and isn't reliant on being  `100.00`
                 """
                 score = int(peer_num_blocks / model.num_blocks * 1e4)
-
                 """
                     Relay servers are slower than direct servers so we lessen the score
 
@@ -108,19 +103,10 @@ def fetch_health_state2(dht: hivemind.DHT) -> dict:
 
                 row = {
                     "peer_id": peer_id,
-                    "peer_ip_info": peers_info.get(str(peer_id), "unknown"),
                     "state": state,
                     "span": span,
                     "score": score,
                     "using_relay": using_relay,
-                    "adapters": [dict(name=name, short_name=name.split("/")[-1]) for name in span.server_info.adapters],
-                    "amount_staked": amount_staked,
-                    "pings_to_me": {
-                        str(origin_id): origin.server_info.next_pings[str(peer_id)]
-                        # for origin_id, origin in model_servers[model.dht_prefix].items()
-                        for origin_id, origin in model_servers.items()
-                        if origin.server_info.next_pings is not None and str(peer_id) in origin.server_info.next_pings
-                    },
                 }
                 if span.server_info.cache_tokens_left is not None:
                     # We use num_blocks * 2 to account for both keys and values

@@ -3,6 +3,19 @@ from substrateinterface import SubstrateInterface, Keypair, ExtrinsicReceipt
 from substrateinterface.exceptions import SubstrateRequestException
 from tenacity import retry, stop_after_attempt, wait_exponential
 
+def get_block_number(substrate: SubstrateInterface):
+  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+  def make_query():
+    try:
+      with substrate as _substrate:
+        block_hash = _substrate.get_block_hash()
+        block_number = _substrate.get_block_number(block_hash)
+        return block_number
+    except SubstrateRequestException as e:
+      print("Failed to get query request: {}".format(e))
+
+  return make_query()
+
 def validate(
   substrate: SubstrateInterface,
   keypair: Keypair,
@@ -39,8 +52,9 @@ def validate(
   @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
   def submit_extrinsic():
     try:
-      receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
-      return receipt
+      with substrate as _substrate:
+        receipt = _substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
+        return receipt
     except SubstrateRequestException as e:
       print("Failed to send: {}".format(e))
 
@@ -78,8 +92,9 @@ def attest(
   @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
   def submit_extrinsic():
     try:
-      receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
-      return receipt
+      with substrate as _substrate:
+        receipt = _substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
+        return receipt
     except SubstrateRequestException as e:
       print("Failed to send: {}".format(e))
 
@@ -118,8 +133,9 @@ def register_subnet(
   @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
   def submit_extrinsic():
     try:
-      receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
-      return receipt
+      with substrate as _substrate:
+        receipt = _substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
+        return receipt
     except SubstrateRequestException as e:
       print("Failed to send: {}".format(e))
 
@@ -152,8 +168,9 @@ def activate_subnet(
   @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
   def submit_extrinsic():
     try:
-      receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
-      return receipt
+      with substrate as _substrate:
+        receipt = _substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
+        return receipt
     except SubstrateRequestException as e:
       print("Failed to send: {}".format(e))
 
@@ -186,8 +203,9 @@ def remove_subnet(
   @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
   def submit_extrinsic():
     try:
-      receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
-      return receipt
+      with substrate as _substrate:
+        receipt = _substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
+        return receipt
     except SubstrateRequestException as e:
       print("Failed to send: {}".format(e))
 
@@ -232,8 +250,9 @@ def vote_subnet_subnet_node_dishonest(
   @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
   def submit_extrinsic():
     try:
-      receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
-      return receipt
+      with substrate as _substrate:
+        receipt = _substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
+        return receipt
     except SubstrateRequestException as e:
       print("Failed to send: {}".format(e))
 
@@ -252,13 +271,14 @@ def get_subnet_nodes(
   @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
   def make_rpc_request():
     try:
-      subnet_nodes_data = substrate.rpc_request(
-        method='network_getSubnetNodes',
-        params=[
-          subnet_id
-        ]
-      )
-      return subnet_nodes_data
+      with substrate as _substrate:
+        subnet_nodes_data = _substrate.rpc_request(
+          method='network_getSubnetNodes',
+          params=[
+            subnet_id
+          ]
+        )
+        return subnet_nodes_data
     except SubstrateRequestException as e:
       print("Failed to get rpc request: {}".format(e))
 
@@ -268,6 +288,7 @@ def get_subnet_nodes_included(
   substrate: SubstrateInterface,
   subnet_id: int,
 ):
+  print("get_subnet_nodes_included")
   """
   Function to return all account_ids and subnet_node_ids from the substrate Hypertensor Blockchain
 
@@ -277,10 +298,12 @@ def get_subnet_nodes_included(
   @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
   def make_rpc_request():
     try:
-      subnet_nodes_data = substrate.rpc_request(
-        method='network_getSubnetNodesIncluded',
-        params=[subnet_id]
-      )
+      with substrate as _substrate:
+        subnet_nodes_data = _substrate.rpc_request(
+          method='network_getSubnetNodesIncluded',
+          params=[subnet_id]
+        )
+        print("get_subnet_nodes_included subnet_nodes_data", subnet_nodes_data)
       return subnet_nodes_data
     except SubstrateRequestException as e:
       print("Failed to get rpc request: {}".format(e))
@@ -300,13 +323,14 @@ def get_subnet_nodes_submittable(
   @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
   def make_rpc_request():
     try:
-      subnet_nodes_data = substrate.rpc_request(
-        method='network_getSubnetNodesSubmittable',
-        params=[
-          subnet_id
-        ]
-      )
-      return subnet_nodes_data
+      with substrate as _substrate:
+        subnet_nodes_data = _substrate.rpc_request(
+          method='network_getSubnetNodesSubmittable',
+          params=[
+            subnet_id
+          ]
+        )
+        return subnet_nodes_data
     except SubstrateRequestException as e:
       print("Failed to get rpc request: {}".format(e))
 
@@ -326,14 +350,15 @@ async def get_consensus_data(
   @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
   def make_rpc_request():
     try:
-      subnet_nodes_data = substrate.rpc_request(
-        method='network_getConsensusData',
-        params=[
-          subnet_id,
-          epoch
-        ]
-      )
-      return subnet_nodes_data
+      with substrate as _substrate:
+        subnet_nodes_data = _substrate.rpc_request(
+          method='network_getConsensusData',
+          params=[
+            subnet_id,
+            epoch
+          ]
+        )
+        return subnet_nodes_data
     except SubstrateRequestException as e:
       print("Failed to get rpc request: {}".format(e))
 
@@ -353,14 +378,15 @@ async def get_accountant_data(
   @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
   def make_rpc_request():
     try:
-      subnet_nodes_data = substrate.rpc_request(
-        method='network_getAccountantData',
-        params=[
-          subnet_id,
-          id
-        ]
-      )
-      return subnet_nodes_data
+      with substrate as _substrate:
+        subnet_nodes_data = _substrate.rpc_request(
+          method='network_getAccountantData',
+          params=[
+            subnet_id,
+            id
+          ]
+        )
+        return subnet_nodes_data
     except SubstrateRequestException as e:
       print("Failed to get rpc request: {}".format(e))
 
@@ -380,14 +406,15 @@ def is_subnet_node_by_peer_id(
   @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
   def make_rpc_request():
     try:
-      is_subnet_node = substrate.rpc_request(
-        method='network_isSubnetNodeByPeerId',
-        params=[
-          subnet_id,
-          peer_id
-        ]
-      )
-      return is_subnet_node
+      with substrate as _substrate:
+        is_subnet_node = _substrate.rpc_request(
+          method='network_isSubnetNodeByPeerId',
+          params=[
+            subnet_id,
+            peer_id
+          ]
+        )
+        return is_subnet_node
     except SubstrateRequestException as e:
       print("Failed to get rpc request: {}".format(e))
 
@@ -406,13 +433,14 @@ def get_minimum_subnet_nodes(
   @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
   def make_rpc_request():
     try:
-      subnet_nodes_data = substrate.rpc_request(
-        method='network_getMinimumSubnetNodes',
-        params=[
-          memory_mb
-        ]
-      )
-      return subnet_nodes_data
+      with substrate as _substrate:
+        subnet_nodes_data = _substrate.rpc_request(
+          method='network_getMinimumSubnetNodes',
+          params=[
+            memory_mb
+          ]
+        )
+        return subnet_nodes_data
     except SubstrateRequestException as e:
       print("Failed to get rpc request: {}".format(e))
 
@@ -431,13 +459,14 @@ def get_minimum_delegate_stake(
   @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
   def make_rpc_request():
     try:
-      subnet_nodes_data = substrate.rpc_request(
-        method='network_getMinimumDelegateStake',
-        params=[
-          memory_mb
-        ]
-      )
-      return subnet_nodes_data
+      with substrate as _substrate:
+        subnet_nodes_data = _substrate.rpc_request(
+          method='network_getMinimumDelegateStake',
+          params=[
+            memory_mb
+          ]
+        )
+        return subnet_nodes_data
     except SubstrateRequestException as e:
       print("Failed to get rpc request: {}".format(e))
 
@@ -456,13 +485,14 @@ def get_subnet_node_info(
   @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
   def make_rpc_request():
     try:
-      subnet_nodes_data = substrate.rpc_request(
-        method='network_getSubnetNodeInfo',
-        params=[
-          subnet_id
-        ]
-      )
-      return subnet_nodes_data
+      with substrate as _substrate:
+        subnet_nodes_data = _substrate.rpc_request(
+          method='network_getSubnetNodeInfo',
+          params=[
+            subnet_id
+          ]
+        )
+        return subnet_nodes_data
     except SubstrateRequestException as e:
       print("Failed to get rpc request: {}".format(e))
 
@@ -505,8 +535,9 @@ def add_subnet_node(
   @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
   def submit_extrinsic():
     try:
-      receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
-      return receipt
+      with substrate as _substrate:
+        receipt = _substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
+        return receipt
     except SubstrateRequestException as e:
       print("Failed to send: {}".format(e))
 
@@ -549,8 +580,9 @@ def register_subnet_node(
   @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
   def submit_extrinsic():
     try:
-      receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
-      return receipt
+      with substrate as _substrate:
+        receipt = _substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
+        return receipt
     except SubstrateRequestException as e:
       print("Failed to send: {}".format(e))
 
@@ -583,8 +615,9 @@ def activate_subnet_node(
   @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
   def submit_extrinsic():
     try:
-      receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
-      return receipt
+      with substrate as _substrate:
+        receipt = _substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
+        return receipt
     except SubstrateRequestException as e:
       print("Failed to send: {}".format(e))
 
@@ -617,8 +650,9 @@ def deactivate_subnet_node(
   @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
   def submit_extrinsic():
     try:
-      receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
-      return receipt
+      with substrate as _substrate:
+        receipt = _substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
+        return receipt
     except SubstrateRequestException as e:
       print("Failed to send: {}".format(e))
 
@@ -654,8 +688,9 @@ def remove_subnet_node(
   @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
   def submit_extrinsic():
     try:
-      receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
-      return receipt
+      with substrate as _substrate:
+        receipt = _substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
+        return receipt
     except SubstrateRequestException as e:
       print("Failed to send: {}".format(e))
 
@@ -691,8 +726,9 @@ def add_to_stake(
   @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
   def submit_extrinsic():
     try:
-      receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
-      return receipt
+      with substrate as _substrate:
+        receipt = _substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
+        return receipt
     except SubstrateRequestException as e:
       print("Failed to send: {}".format(e))
 
@@ -731,8 +767,9 @@ def remove_stake(
   @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
   def submit_extrinsic():
     try:
-      receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
-      return receipt
+      with substrate as _substrate:
+        receipt = _substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
+        return receipt
     except SubstrateRequestException as e:
       print("Failed to send: {}".format(e))
 
@@ -768,8 +805,9 @@ def add_to_delegate_stake(
   @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
   def submit_extrinsic():
     try:
-      receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
-      return receipt
+      with substrate as _substrate:
+        receipt = _substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
+        return receipt
     except SubstrateRequestException as e:
       print("Failed to send: {}".format(e))
 
@@ -789,8 +827,9 @@ def get_balance(
   @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
   def make_query():
     try:
-      result = substrate.query('System', 'Account', [address])
-      return result.value['data']['free']
+      with substrate as _substrate:
+        result = _substrate.query('System', 'Account', [address])
+        return result.value['data']['free']
     except SubstrateRequestException as e:
       print("Failed to get rpc request: {}".format(e))
 
@@ -811,8 +850,9 @@ def get_subnet_stake_balance(
   @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
   def make_query():
     try:
-      result = substrate.query('Network', 'AccountSubnetStake', [address, subnet_id])
-      return result
+      with substrate as _substrate:
+        result = _substrate.query('Network', 'AccountSubnetStake', [address, subnet_id])
+        return result
     except SubstrateRequestException as e:
       print("Failed to get rpc request: {}".format(e))
 
@@ -833,8 +873,9 @@ def get_subnet_node_account(
   @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
   def make_query():
     try:
-      result = substrate.query('Network', 'SubnetNodeAccount', [subnet_id, peer_id])
-      return result
+      with substrate as _substrate:
+        result = _substrate.query('Network', 'SubnetNodeAccount', [subnet_id, peer_id])
+        return result
     except SubstrateRequestException as e:
       print("Failed to get rpc request: {}".format(e))
 
@@ -853,8 +894,9 @@ def get_subnet_accounts(
   @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
   def make_query():
     try:
-      result = substrate.query('Network', 'SubnetAccount', [subnet_id])
-      return result
+      with substrate as _substrate:
+        result = _substrate.query('Network', 'SubnetAccount', [subnet_id])
+        return result
     except SubstrateRequestException as e:
       print("Failed to get rpc request: {}".format(e))
 
@@ -874,8 +916,9 @@ def get_subnet_id_by_path(
   @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
   def make_query():
     try:
-      result = substrate.query('Network', 'SubnetPaths', [path])
-      return result
+      with substrate as _substrate:
+        result = _substrate.query('Network', 'SubnetPaths', [path])
+        return result
     except SubstrateRequestException as e:
       print("Failed to get rpc request: {}".format(e))
 
@@ -895,8 +938,9 @@ def get_subnet_data(
   @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
   def make_query():
     try:
-      result = substrate.query('Network', 'SubnetsData', [id])
-      return result
+      with substrate as _substrate:
+        result = _substrate.query('Network', 'SubnetsData', [id])
+        return result
     except SubstrateRequestException as e:
       print("Failed to get rpc request: {}".format(e))
 
@@ -913,8 +957,9 @@ def get_max_subnets(substrate: SubstrateInterface):
   @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
   def make_query():
     try:
-      result = substrate.query('Network', 'MaxSubnets')
-      return result
+      with substrate as _substrate:
+        result = _substrate.query('Network', 'MaxSubnets')
+        return result
     except SubstrateRequestException as e:
       print("Failed to get rpc request: {}".format(e))
 
@@ -931,8 +976,9 @@ def get_min_subnet_nodes(substrate: SubstrateInterface):
   @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
   def make_query():
     try:
-      result = substrate.query('Network', 'MinSubnetNodes')
-      return result
+      with substrate as _substrate:
+        result = _substrate.query('Network', 'MinSubnetNodes')
+        return result
     except SubstrateRequestException as e:
       print("Failed to get rpc request: {}".format(e))
 
@@ -949,8 +995,9 @@ def get_max_subnet_nodes(substrate: SubstrateInterface):
   @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
   def make_query():
     try:
-      result = substrate.query('Network', 'MaxSubnetNodes')
-      return result
+      with substrate as _substrate:
+        result = _substrate.query('Network', 'MaxSubnetNodes')
+        return result
     except SubstrateRequestException as e:
       print("Failed to get rpc request: {}".format(e))
 
@@ -967,8 +1014,9 @@ def get_min_stake_balance(substrate: SubstrateInterface):
   @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
   def make_query():
     try:
-      result = substrate.query('Network', 'MinStakeBalance')
-      return result
+      with substrate as _substrate:
+        result = _substrate.query('Network', 'MinStakeBalance')
+        return result
     except SubstrateRequestException as e:
       print("Failed to get rpc request: {}".format(e))
 
@@ -985,30 +1033,13 @@ def get_tx_rate_limit(substrate: SubstrateInterface):
   @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
   def make_query():
     try:
-      result = substrate.query('Network', 'TxRateLimit')
-      return result
+      with substrate as _substrate:
+        result = _substrate.query('Network', 'TxRateLimit')
+        return result
     except SubstrateRequestException as e:
       print("Failed to get rpc request: {}".format(e))
 
   return make_query()
-
-# def get_max_subnet_consensus_epochs(substrate: SubstrateInterface):
-#   """
-#   Function to get the maximum number of epochs allowed for subnet consensus
-
-#   :param SubstrateInterface: substrate interface from blockchain url
-#   :returns: max_subnet_consensus_epochs
-#   """
-
-#   @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
-#   def make_query():
-#     try:
-#       result = substrate.query('Network', 'MaxSubnetConsensusEpochsErrors')
-#       return result
-#     except SubstrateRequestException as e:
-#       print("Failed to get rpc request: {}".format(e))
-
-#   return make_query()
 
 def get_min_required_subnet_consensus_submit_epochs(substrate: SubstrateInterface):
   """
@@ -1021,8 +1052,9 @@ def get_min_required_subnet_consensus_submit_epochs(substrate: SubstrateInterfac
   @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
   def make_query():
     try:
-      result = substrate.query('Network', 'MinRequiredSubnetConsensusSubmitEpochs')
-      return result
+      with substrate as _substrate:
+        result = _substrate.query('Network', 'MinRequiredSubnetConsensusSubmitEpochs')
+        return result
     except SubstrateRequestException as e:
       print("Failed to get rpc request: {}".format(e))
 
@@ -1050,8 +1082,9 @@ def get_epoch_length(substrate: SubstrateInterface):
   @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
   def make_query():
     try:
-      result = substrate.get_constant('Network', 'EpochLength')
-      return result
+      with substrate as _substrate:
+        result = _substrate.get_constant('Network', 'EpochLength')
+        return result
     except SubstrateRequestException as e:
       print("Failed to get rpc request: {}".format(e))
 
@@ -1072,8 +1105,9 @@ def get_rewards_validator(
   @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
   def make_query():
     try:
-      result = substrate.query('Network', 'SubnetRewardsValidator', [subnet_id, epoch])
-      return result
+      with substrate as _substrate:
+        result = _substrate.query('Network', 'SubnetRewardsValidator', [subnet_id, epoch])
+        return result
     except SubstrateRequestException as e:
       print("Failed to get rpc request: {}".format(e))
 
@@ -1094,8 +1128,9 @@ def get_rewards_submission(
   @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
   def make_query():
     try:
-      result = substrate.query('Network', 'SubnetRewardsSubmission', [subnet_id, epoch])
-      return result
+      with substrate as _substrate:
+        result = _substrate.query('Network', 'SubnetRewardsSubmission', [subnet_id, epoch])
+        return result
     except SubstrateRequestException as e:
       print("Failed to get rpc request: {}".format(e))
 
@@ -1112,8 +1147,9 @@ def get_min_subnet_registration_blocks(substrate: SubstrateInterface):
   @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
   def make_query():
     try:
-      result = substrate.query('Network', 'MinSubnetRegistrationBlocks')
-      return result
+      with substrate as _substrate:
+        result = _substrate.query('Network', 'MinSubnetRegistrationBlocks')
+        return result
     except SubstrateRequestException as e:
       print("Failed to get rpc request: {}".format(e))
 
@@ -1130,8 +1166,9 @@ def get_max_subnet_registration_blocks(substrate: SubstrateInterface):
   @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
   def make_query():
     try:
-      result = substrate.query('Network', 'MaxSubnetRegistrationBlocks')
-      return result
+      with substrate as _substrate:
+        result = _substrate.query('Network', 'MaxSubnetRegistrationBlocks')
+        return result
     except SubstrateRequestException as e:
       print("Failed to get rpc request: {}".format(e))
 

@@ -11,7 +11,7 @@ INITIAL_PEERS = PUBLIC_INITIAL_PEERS
 # )
 
 MODEL = ModelInfo(
-    dht_prefix="Orenguteng/Llama-3.1-8B-Lexi-Uncensored-V2",
+    dht_prefix="Llama-3-1-8B-Lexi-Uncensored-V2-hf",
     repository="https://huggingface.co/Orenguteng/Llama-3.1-8B-Lexi-Uncensored-V2",
     num_blocks=32,
 )
