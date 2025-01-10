@@ -4,8 +4,8 @@ import hivemind
 import pytest
 import torch
 
-from petals import AutoDistributedConfig, RemoteSequential
-from petals.server.handler import CACHE_TOKENS_AVAILABLE
+from subnet import AutoDistributedConfig, RemoteSequential
+from subnet.server.handler import CACHE_TOKENS_AVAILABLE
 from test_utils import *
 
 

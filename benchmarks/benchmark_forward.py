@@ -8,8 +8,8 @@ import numpy as np
 import torch
 from hivemind.utils.logging import get_logger
 
-from petals import AutoDistributedModel
-from petals.constants import DTYPE_MAP, PUBLIC_INITIAL_PEERS
+from subnet import AutoDistributedModel
+from subnet.constants import DTYPE_MAP, PUBLIC_INITIAL_PEERS
 
 logger = get_logger()
 

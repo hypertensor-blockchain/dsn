@@ -4,10 +4,10 @@ import torch.nn.functional as F
 from hivemind import DHT, BatchTensorDescriptor, get_logger
 from hivemind.proto import runtime_pb2
 
-from petals import AutoDistributedConfig
-from petals.client import RemoteSequenceManager, RemoteSequential
-from petals.data_structures import UID_DELIMITER
-from petals.server.from_pretrained import load_pretrained_block
+from subnet import AutoDistributedConfig
+from subnet.client import RemoteSequenceManager, RemoteSequential
+from subnet.data_structures import UID_DELIMITER
+from subnet.server.from_pretrained import load_pretrained_block
 from test_utils import *
 
 logger = get_logger(__name__)

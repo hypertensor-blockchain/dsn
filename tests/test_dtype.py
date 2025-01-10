@@ -1,9 +1,9 @@
 import pytest
 import torch
 
-from petals.server.block_utils import resolve_block_dtype
-from petals.server.from_pretrained import load_pretrained_block
-from petals.utils.auto_config import AutoDistributedConfig
+from subnet.server.block_utils import resolve_block_dtype
+from subnet.server.from_pretrained import load_pretrained_block
+from subnet.utils.auto_config import AutoDistributedConfig
 from test_utils import MODEL_NAME
 
 
