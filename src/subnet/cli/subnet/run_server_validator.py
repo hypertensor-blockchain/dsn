@@ -264,7 +264,8 @@ def main():
         compression=compression,
         max_disk_space=max_disk_space,
         authorizer=authorizer,
-        substrate=substrate
+        subnet_id=subnet_id,
+        substrate=substrate,
     )
     try:
         server.run()

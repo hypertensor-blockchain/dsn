@@ -104,6 +104,7 @@ class Server:
     ):
         """Create a server with one or more bloom blocks. See run_server.py for documentation."""
         self.substrate = kwargs.pop('substrate')
+        subnet_id = kwargs.pop('subnet_id')
 
         self.is_validator = False
 
@@ -127,7 +128,9 @@ class Server:
             converted_model_name_or_path,
             use_auth_token=token,
             revision=revision,
+            subnet_id=subnet_id,
             identity_path=identity_path,
+            rpc=self.substrate.url,
         )
 
         if dht_prefix is None:
@@ -305,7 +308,7 @@ class Server:
         self.module_container = None
         self.stop = threading.Event()
 
-        self.run_consensus()
+        # self.run_consensus()
 
     def run_consensus(self):
         Consensus(self.path, self.authorizer, self.substrate)

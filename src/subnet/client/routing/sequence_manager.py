@@ -90,7 +90,9 @@ class RemoteSequenceManager:
         *,
         dht: Optional[DHT] = None,
         state: Optional[SequenceManagerState] = None,
-        identity_path: Optional[str] = None
+        subnet_id: Optional[int] = None,
+        identity_path: Optional[str] = None,
+        rpc: Optional[str] = None,
     ):
         assert config.initial_peers or dht is not None, "Please specify `config.initial_peers` or `dht`"
         assert config.dht_prefix, "Could not find dht_prefix in config, please create model with dht_prefix=..."
@@ -101,6 +103,7 @@ class RemoteSequenceManager:
             state = SequenceManagerState()
         self.state = state
 
+        print("RemoteSequenceManager rpc", rpc)
         if dht is None:
             with open(f"{identity_path}", "rb") as f:
                 data = f.read()
@@ -108,14 +111,13 @@ class RemoteSequenceManager:
                 raw_private_key = ed25519.Ed25519PrivateKey.from_private_bytes(key_data[:32])
                 private_key = Ed25519PrivateKey(private_key=raw_private_key)
 
-            #TODO: streamline the authorizer instead of pulling from ``.env``
             dht = DHT(
                 initial_peers=config.initial_peers,
                 client_mode=True,
                 num_workers=32,
                 startup_timeout=config.daemon_startup_timeout,
                 start=True,
-                authorizer=POSAuthorizerLive(private_key, SUBNET_ID, SubstrateConfigCustom(PHRASE, RPC).interface)
+                authorizer=POSAuthorizerLive(private_key, subnet_id, SubstrateConfigCustom(PHRASE, rpc).interface)
                 # authorizer=POSAuthorizer(private_key)
             )
         assert isinstance(dht, DHT) and dht.is_alive(), "`dht` must be a running hivemind.DHT instance"

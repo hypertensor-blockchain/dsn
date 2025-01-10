@@ -38,14 +38,16 @@ class DistributedLlamaModel(FromPretrainedMixin, PTuneMixin, LlamaModel):
         config: DistributedLlamaConfig, 
         *, 
         dht: Optional[hivemind.DHT] = None, 
-        identity_path: Optional[str] = None
+        subnet_id: Optional[int] = None,
+        identity_path: Optional[str] = None,
+        rpc: Optional[str] = None
     ):
         n_layer, config.num_hidden_layers = config.num_hidden_layers, 0  # Prevent initialization
         super().__init__(config)
         assert len(self.layers) == 0
         config.num_hidden_layers = n_layer
 
-        self.layers = RemoteSequential(config, dht=dht, identity_path=identity_path)
+        self.layers = RemoteSequential(config, dht=dht, subnet_id=subnet_id, identity_path=identity_path, rpc=rpc)
 
         self.requires_grad_(False)  # Forbid accumulate grads for embeddings and layernorm
         self.init_prompts(config)
@@ -149,9 +151,15 @@ class DistributedLlamaForCausalLM(FromPretrainedMixin, RemoteGenerationMixin, Ll
 
     config_class = DistributedLlamaConfig
 
-    def __init__(self, config: DistributedLlamaConfig, identity_path: Optional[str] = None):
+    def __init__(
+        self, 
+        config: DistributedLlamaConfig, 
+        subnet_id: Optional[int] = None,
+        identity_path: Optional[str] = None,
+        rpc: Optional[str] = None
+    ):
         LlamaPreTrainedModel.__init__(self, config)
-        self.model = DistributedLlamaModel(config, identity_path=identity_path)
+        self.model = DistributedLlamaModel(config, subnet_id=subnet_id, identity_path=identity_path, rpc=rpc)
         self.pretraining_tp = config.pretraining_tp
         self.vocab_size = config.vocab_size
         self.lm_head = LMHead(config)
@@ -174,6 +182,7 @@ class DistributedLlamaForSequenceClassification(FromPretrainedMixin, LlamaForSeq
     config_class = DistributedLlamaConfig
 
     def __init__(self, config):
+        print("DistributedLlamaForSequenceClassification __init__")
         LlamaPreTrainedModel.__init__(self, config)
         self.num_labels = config.num_labels
 
@@ -201,12 +210,12 @@ class DistributedLlamaModelValidator(FromPretrainedMixinValidator, PTuneMixinVal
     config_class = DistributedLlamaConfigValidator
 
     def __init__(
-            self, 
-            config: DistributedLlamaConfigValidator, 
-            *, 
-            dht: Optional[hivemind.DHT] = None,
-            identity_path: Optional[str] = None
-        ):
+        self, 
+        config: DistributedLlamaConfigValidator, 
+        *, 
+        dht: Optional[hivemind.DHT] = None,
+        identity_path: Optional[str] = None
+    ):
         n_layer, config.num_hidden_layers = config.num_hidden_layers, 0  # Prevent initialization
         super().__init__(config)
         assert len(self.layers) == 0

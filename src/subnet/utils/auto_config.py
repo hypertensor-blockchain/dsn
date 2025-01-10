@@ -45,6 +45,14 @@ class _AutoDistributedBase:
         if identity_path is None:
             logger.warning("Identity path is None")
         
+        rpc = kwargs.pop('rpc', None)
+        if rpc is None:
+            logger.warning("RPC is None")
+
+        subnet_id = kwargs.pop('subnet_id', None)
+        if subnet_id is None:
+            logger.warning("Subnet ID is None")
+
         config = AutoConfig.from_pretrained(model_name_or_path, *args, **kwargs)
         if config.model_type not in _CLASS_MAPPING:
             raise ValueError(f"Petals does not support model type {config.model_type}")
@@ -54,7 +62,14 @@ class _AutoDistributedBase:
         if proper_cls is None:
             raise ValueError(f"Petals does not have {cls.__name__} for model type {config.model_type}")
 
-        return proper_cls.from_pretrained(model_name_or_path, *args, **kwargs, identity_path=identity_path)
+        return proper_cls.from_pretrained(
+            model_name_or_path, 
+            *args, 
+            **kwargs, 
+            subnet_id=subnet_id,
+            identity_path=identity_path, 
+            rpc=rpc
+        )
 
 
 class DefaultRevisionMixin:
