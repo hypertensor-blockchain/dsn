@@ -110,7 +110,7 @@ env.bak/
 venv.bak/
 
 # Temporary files
-tmp/
+tmp/*
 
 # Spyder project settings
 .spyderproject
