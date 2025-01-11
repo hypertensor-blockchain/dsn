@@ -111,6 +111,7 @@ venv.bak/
 
 # Temporary files
 tmp/*
+!tmp/.gitignore
 
 # Spyder project settings
 .spyderproject
