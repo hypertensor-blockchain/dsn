@@ -3,7 +3,14 @@ import argparse
 from hivemind.utils.logging import get_logger
 
 from subnet.substrate.chain_functions import deactivate_subnet_node
-from subnet.substrate.config import SubstrateConfig
+from subnet.substrate.config import SubstrateConfigCustom
+from pathlib import Path
+import os
+from dotenv import load_dotenv
+
+load_dotenv(os.path.join(Path.cwd(), '.env'))
+
+PHRASE = os.getenv('PHRASE')
 
 logger = get_logger(__name__)
 
@@ -17,13 +24,20 @@ def main():
     parser.add_argument("--subnet_id", type=str, required=True, help="Subnet ID you activated your subnet node for. ")
 
     args = parser.parse_args()
+    local = args.local
+    if local:
+        rpc = os.getenv('LOCAL_RPC')
+    else:
+        rpc = os.getenv('DEV_RPC')
+
+    substrate = SubstrateConfigCustom(PHRASE, rpc)
 
     subnet_id = args.subnet_id
 
     try:
         receipt = deactivate_subnet_node(
-            SubstrateConfig.interface,
-            SubstrateConfig.keypair,
+            substrate.interface,
+            substrate.keypair,
             subnet_id,
         )
         if receipt.is_success:

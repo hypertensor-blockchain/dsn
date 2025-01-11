@@ -308,7 +308,7 @@ class Server:
         self.module_container = None
         self.stop = threading.Event()
 
-        # self.run_consensus()
+        self.run_consensus()
 
     def run_consensus(self):
         Consensus(self.path, self.authorizer, self.substrate)
