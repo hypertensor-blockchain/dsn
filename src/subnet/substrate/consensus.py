@@ -1,4 +1,5 @@
 from dataclasses import asdict
+import threading
 import time
 
 from hivemind.utils.auth import AuthorizerBase
@@ -13,7 +14,7 @@ import gc
 
 logger = get_logger(__name__)
 
-class Consensus():
+class Consensus(threading.Thread):
   """
   Houses logic for validating and attesting consensus data per epochs for rewards
 
@@ -45,8 +46,8 @@ class Consensus():
     # initialize DHT client for scoring protocol
     self.scoring_protocol = ScoringProtocol(self.authorizer)
 
-    # self.start()
-    self.run()
+    self.start()
+    # self.run()
 
   def run(self):
     while True:
