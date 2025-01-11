@@ -26,6 +26,7 @@ def main():
     parser.add_argument("--a", type=str, required=False, default=None, help="Unique identifier for subnet node, such as a public key")
     parser.add_argument("--b", type=str, required=False, default=None, help="Non-unique value for subnet node")
     parser.add_argument("--c", type=str, required=False, default=None, help="Non-unique value for subnet node")
+    parser.add_argument("--local", action="store_true", help="Run in local mode, uses LOCAL_RPC")
 
     args = parser.parse_args()
     local = args.local

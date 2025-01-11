@@ -22,6 +22,7 @@ def main():
     # fmt:off
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--subnet_id", type=str, required=True, help="Subnet ID you registered your subnet node for. ")
+    parser.add_argument("--local", action="store_true", help="Run in local mode, uses LOCAL_RPC")
 
     args = parser.parse_args()
     local = args.local
