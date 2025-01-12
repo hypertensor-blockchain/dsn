@@ -183,7 +183,10 @@ def get_consensus_data(
   )
 
   if result is None:
-    return {}
+    return {
+      "model_state": "broken",
+      "peers": []
+    }
 
   subnet_nodes_data = SubnetNode.list_from_vec_u8(result["result"])
 

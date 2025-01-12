@@ -200,8 +200,8 @@ class Consensus(threading.Thread):
     
     logger.info("Checking if we should attest the validators submission")
     logger.info("Generating consensus data")
-    consensus_data = self._get_consensus_data()
-    should_attest = self.should_attest(validator_consensus_data, consensus_data)
+    consensus_data = self._get_consensus_data() # should always return `peers` key
+    should_attest = self.should_attest(validator_consensus_data, consensus_data["peers"])
     logger.info("Should attest is: %s", should_attest)
 
     if should_attest:
