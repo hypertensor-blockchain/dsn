@@ -1,7 +1,7 @@
 import argparse
 from hivemind.utils.logging import get_logger
 
-from subnet.substrate.chain_functions import register_subnet_node
+from subnet.substrate.chain_functions import add_subnet_node, register_subnet_node
 from subnet.substrate.config import SubstrateConfigCustom
 from pathlib import Path
 import os
@@ -14,7 +14,7 @@ PHRASE = os.getenv('PHRASE')
 logger = get_logger(__name__)
 
 """
-python -m subnet.cli.hypertensor.subnet_node.register --subnet_id 1 --peer_id 12D3KooWBF38f6Y9NE4tMUQRfQ7Yt2HS26hnqUTB88isTZF8bwLs --stake_to_be_added 1000.00 
+python -m subnet.cli.hypertensor.subnet_node.add --subnet_id 1 --peer_id 12D3KooWBF38f6Y9NE4tMUQRfQ7Yt2HS26hnqUTB88isTZF8bwLs --stake_to_be_added 1000.00 
 """
 
 def main():
@@ -46,7 +46,7 @@ def main():
     c = args.c
 
     try:
-        receipt = register_subnet_node(
+        receipt = add_subnet_node(
             substrate.interface,
             substrate.keypair,
             subnet_id,

@@ -46,11 +46,13 @@ class Consensus(threading.Thread):
     # initialize DHT client for scoring protocol
     self.scoring_protocol = ScoringProtocol(self.authorizer)
 
+    self.stop = threading.Event()
+
     self.start()
-    # self.run()
 
   def run(self):
-    while True:
+    # while True:
+    while not self.stop.is_set():
       try:
         # get epoch
         block_hash = self.substrate_config.interface.get_block_hash()
@@ -76,6 +78,13 @@ class Consensus(threading.Thread):
         if self.subnet_accepting_consensus == False:
           logger.info("Waiting for subnet activation")
           activated = self._activate_subnet()
+
+          # if given shutdown flag
+          # ``_activate_subnet(self)`` can shutdown if the subnet is Null
+          if self.stop.is_set():
+            logger.info("Consensus thread shutdown, stopping consensus")
+            break
+
           if activated == True:
             continue
           else:
@@ -166,7 +175,7 @@ class Consensus(threading.Thread):
             self.last_validated_or_attested_epoch = epoch
             break
       except Exception as e:
-        logger.error("Consensus Error: %s" % e)
+        logger.error("Consensus Error: %s" % e, exc_info=True)
 
   def validate(self):
     """Get rewards data and submit consensus"""
@@ -276,13 +285,19 @@ class Consensus(threading.Thread):
       bool: True if subnet was successfully activated, False otherwise.
     """
     subnet_id = get_subnet_id_by_path(self.substrate_config.interface, self.path)
-    assert subnet_id is not None, logger.error("Cannot find subnet at path: %s", self.path)
+    if subnet_id.meta_info['result_found'] is False:
+      logger.error("Cannot find subnet at path: %s, shutting down", self.path)
+      self.shutdown()
+      return False
     
     subnet_data = get_subnet_data(
       self.substrate_config.interface,
       int(str(subnet_id))
     )
-    assert subnet_data is not None, logger.error("Cannot find subnet at ID: %s", subnet_id)
+    if subnet_data.meta_info['result_found'] is False:
+      logger.error("Cannot find subnet at ID: %s, shutting down", subnet_id)
+      self.shutdown()
+      return False
 
     initialized = int(str(subnet_data['initialized']))
     registration_blocks = int(str(subnet_data['registration_blocks']))
@@ -290,10 +305,10 @@ class Consensus(threading.Thread):
 
     # if we didn't activate the subnet, someone indexed before us should have - see logic below
     if subnet_data['activated'] > 0:
-      logger.info("Subnet activated, just getting things set up for consensus...")
       self.subnet_accepting_consensus = True
       self.subnet_id = int(str(subnet_id))
       self.subnet_activated = int(str(subnet_data["activated"]))
+      logger.info("Subnet activated")
       return True
 
     # the following logic is for registering subnets with nodes waiting to activate the subnet onchain
@@ -350,6 +365,7 @@ class Consensus(threading.Thread):
         self.subnet_accepting_consensus = True
         self.subnet_id = int(str(subnet_id))
         self.subnet_activated = True
+        logger.info("Subnet activated")
         return True
 
       # Attempt to activate subnet
@@ -359,13 +375,20 @@ class Consensus(threading.Thread):
         int(str(subnet_id)),
       )
 
+      if receipt.is_success is not True:
+        return False
+
+      is_success = False
       for event in receipt.triggered_events:
-        print(f'* {event.value}')
+        event_id = event.value['event']['event_id']
+        if event_id is 'SubnetActivated':
+          is_success = True
         
-      if receipt.is_success:
+      if is_success:
         self.subnet_accepting_consensus = True
         self.subnet_id = int(str(subnet_id))
         self.subnet_activated = True
+        logger.info("Subnet activated")
         return True
 
     # check if subnet failed to be activated
@@ -402,3 +425,6 @@ class Consensus(threading.Thread):
     logger.info("Validator matching intersection of %s my data" % ((len(intersection))/len(set2) * 100))
 
     return set1 == set2
+
+  def shutdown(self):
+    self.stop.set()

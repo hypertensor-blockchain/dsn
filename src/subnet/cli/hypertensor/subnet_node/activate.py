@@ -15,7 +15,7 @@ PHRASE = os.getenv('PHRASE')
 logger = get_logger(__name__)
 
 """
-python -m petals.cli.hypertensor.subnet_node.activate --subnet_id 1
+python -m subnet.cli.hypertensor.subnet_node.activate --subnet_id 1
 """
 
 def main():
