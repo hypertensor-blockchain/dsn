@@ -284,7 +284,6 @@ class Consensus(threading.Thread):
       bool: True if subnet was successfully activated, False otherwise.
     """
     subnet_id = get_subnet_id_by_path(self.substrate_config.interface, self.path)
-    print("_activate_subnet subnet_id", subnet_id)
     if subnet_id.meta_info['result_found'] is False:
       logger.error("Cannot find subnet ID at path: %s, shutting down", self.path)
       self.shutdown()
@@ -294,7 +293,6 @@ class Consensus(threading.Thread):
       self.substrate_config.interface,
       int(str(subnet_id))
     )
-    print("_activate_subnet subnet_data", subnet_data)
     if subnet_data.meta_info['result_found'] is False:
       logger.error("Cannot find subnet data at ID: %s, shutting down", subnet_id)
       self.shutdown()
