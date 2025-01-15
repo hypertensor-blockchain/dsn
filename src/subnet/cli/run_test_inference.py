@@ -1,5 +1,5 @@
 """
-python -m petals.cli.run_test_inference
+python -m subnet.cli.run_test_inference
 """
 import argparse
 import logging
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
-# python -m petals.cli.run_test_inference 
+# python -m subnet.cli.run_test_inference 
 
 def safe_decode(tokenizer: PreTrainedTokenizer, outputs: Union[torch.Tensor, List[int]]) -> str:
     # Workaround to make SentencePiece .decode() keep leading spaces in a token

@@ -17,7 +17,7 @@ async def check_reachability(peer_id, _, node, *, fetch_info=False, connect_time
 
     try:
         async with timeout(connect_timeout):
-            if fetch_info:  # For Petals servers
+            if fetch_info:  # For Subnet servers
                 stub = TransformerConnectionHandler.get_stub(node.p2p, peer_id)
                 response = await stub.rpc_info(hivemind.proto.runtime_pb2.ExpertUID())
                 rpc_info = hivemind.MSGPackSerializer.loads(response.serialized_info)
@@ -27,8 +27,7 @@ async def check_reachability(peer_id, _, node, *, fetch_info=False, connect_time
                 await node.p2p._client.disconnect(peer_id)
                 rpc_info = {"ok": True}
 
-        # if fetch_info:  # For Petals servers
-        #     print("For Petals servers")
+        # if fetch_info:  # For Subnet servers
         #     stub = TransformerConnectionHandler.get_stub(node.p2p, peer_id)
         #     response = await stub.rpc_info(hivemind.proto.runtime_pb2.ExpertUID())
         #     rpc_info = hivemind.MSGPackSerializer.loads(response.serialized_info)
@@ -41,8 +40,8 @@ async def check_reachability(peer_id, _, node, *, fetch_info=False, connect_time
 
         # with timeout(connect_timeout):
         #     print("with timeout")
-        #     if fetch_info:  # For Petals servers
-        #         print("For Petals servers")
+        #     if fetch_info:  # For Subnet servers
+        #         print("For Subnet servers")
         #         stub = TransformerConnectionHandler.get_stub(node.p2p, peer_id)
         #         response = await stub.rpc_info(hivemind.proto.runtime_pb2.ExpertUID())
         #         rpc_info = hivemind.MSGPackSerializer.loads(response.serialized_info)

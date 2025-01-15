@@ -405,11 +405,11 @@ class InferenceSession:
         self.close()
 
     @property
-    def last_token_id(self) -> Optional[torch.Tensor]:  # Backward compatibility with Petals < 2.1.0
+    def last_token_id(self) -> Optional[torch.Tensor]:  # Backward compatibility with Subnet < 2.1.0
         return self.output_ids[:, -1:] if self.output_ids is not None else None
 
     @last_token_id.setter
-    def last_token_id(self, value: torch.Tensor):  # Backward compatibility with Petals < 2.1.0
+    def last_token_id(self, value: torch.Tensor):  # Backward compatibility with Subnet < 2.1.0
         if self.output_ids is None:
             raise RuntimeError("Can't override `last_token_id` since the session has not stepped yet")
         self.output_ids[:, -1:] = value

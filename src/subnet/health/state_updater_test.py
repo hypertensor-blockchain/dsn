@@ -5,7 +5,7 @@ logger = hivemind.get_logger(__name__)
 
 PUBLIC_INITIAL_PEERS = ["/ip4/3.16.197.70/tcp/31330/p2p/12D3KooWNujrmWnkXz9Qr4WkPcEWUFgeqkgRKjymkrRUQHgWPFpC"]
 
-# python src/petals/health/state_updater_test.py
+# python src/subnet/health/state_updater_test.py
 
 def get_peers_data():
     try:

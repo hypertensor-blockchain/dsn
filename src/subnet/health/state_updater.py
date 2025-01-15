@@ -16,7 +16,7 @@ from .health_v2 import fetch_health_state2, get_online_peers, get_online_peers_d
 
 logger = hivemind.get_logger(__name__)
 
-# python src/petals/health/state_updater.py
+# python src/subnet/health/state_updater.py
 
 class StateUpdaterThread(threading.Thread):
     def __init__(self, dht: hivemind.DHT, **kwargs):

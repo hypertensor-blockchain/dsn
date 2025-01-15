@@ -18,7 +18,7 @@ from subnet.utils.version import validate_version
 
 logger = get_logger(__name__)
 
-# python -m petals.cli.server.run_server_bare 
+# python -m subnet.cli.server.run_server_bare 
 
 def main():
     # fmt:off
@@ -161,7 +161,7 @@ def main():
                         "weight matrix. See https://huggingface.co/transformers/v4.9.0/parallelism.html#tensor-parallelism")
 
     parser.add_argument("--skip_reachability_check", action='store_true',
-                        help="Skip checking this server's reachability via health.petals.dev "
+                        help="Skip checking this server's reachability via dash.hypertensor.org "
                              "when connecting to the public swarm. If you connect to a private swarm, "
                              "the check is skipped by default. Use this option only if you know what you are doing")
 

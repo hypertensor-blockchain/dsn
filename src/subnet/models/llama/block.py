@@ -132,7 +132,7 @@ class OptimizedLlamaDecoderLayer(LlamaDecoderLayer):
         nn.Module.__init__(self)
         self.hidden_size = config.hidden_size
         self.self_attn = OptimizedLlamaAttention(config=config, layer_idx=0)
-        # layer_idx only matters for KV caching, and we re-implement it in Petals
+        # layer_idx only matters for KV caching, and we re-implement it in Subnet
         self.mlp = LlamaMLP(config)
         self.input_layernorm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.post_attention_layernorm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)

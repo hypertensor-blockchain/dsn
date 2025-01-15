@@ -15,8 +15,8 @@ import multihash
 
 logger = get_logger(__name__)
 
-# python -m petals.cli.crypto.keygen 
-# python -m petals.cli.crypto.keygen --path private_key2.key
+# python -m subnet.cli.crypto.keygen 
+# python -m subnet.cli.crypto.keygen --path private_key2.key
 
 def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)

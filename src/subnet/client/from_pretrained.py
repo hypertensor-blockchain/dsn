@@ -32,10 +32,10 @@ class FromPretrainedMixin:
 
     from_pretrained.__doc__ = BloomPreTrainedModel.from_pretrained.__doc__.replace(
         "low_cpu_mem_usage(`bool`, *optional*)",
-        "low_cpu_mem_usage(`bool`, *optional*, defaults to `True` in Petals)",
+        "low_cpu_mem_usage(`bool`, *optional*, defaults to `True` in Subnet)",
     ).replace(
         "torch_dtype (`str` or `torch.dtype`, *optional*)",
-        'torch_dtype (`str` or `torch.dtype`, *optional*, defaults to `"auto"` in Petals)',
+        'torch_dtype (`str` or `torch.dtype`, *optional*, defaults to `"auto"` in Subnet)',
     )
 
 

@@ -47,8 +47,8 @@ logger = get_logger(__name__)
 class SequenceManagerConfig(ClientConfig):
     def __init__(self, *args, **kwargs):
         warnings.warn(
-            "petals.client.routing.SequenceManagerConfig has been moved to petals.ClientConfig. "
-            "This alias will be removed in Petals 2.2.0+",
+            "subnet.client.routing.SequenceManagerConfig has been moved to subnet.ClientConfig. "
+            "This alias will be removed in Subnet 2.2.0+",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -499,7 +499,7 @@ class RemoteSequenceManager:
     ) -> Optional[Dict[str, Any]]:
         """
         :param protocol: one of "rpc_forward", "rpc_backward" or "rpc_inference"
-        :param args_structure: the structure of flattened tensors from pack_args_kwargs in petals.utils.packaging
+        :param args_structure: the structure of flattened tensors from pack_args_kwargs in subnet.utils.packaging
         :param args: request-specific inputs, typically block uids and input tensors
         :param kwargs: additional request context, such as remote peer ID
         :returns: msgpack-serialized metadata dict that will be passed alongside a given request
@@ -561,7 +561,7 @@ class MissingBlocksError(RuntimeError):
     def __init__(self, block_indices: Union[int, Sequence[int]]):
         super().__init__(
             f"No servers holding blocks {block_indices} are online. "
-            f"You can check the public swarm's state at https://health.petals.dev "
+            f"You can check the public swarm's state at https://dash.hypertensor.org "
             f"If there are not enough servers, please connect your GPU: "
-            f"https://github.com/bigscience-workshop/petals#connect-your-gpu-and-increase-petals-capacity "
+            f"https://github.com/hypertensor-blockchain/subnet-llm-template "
         )

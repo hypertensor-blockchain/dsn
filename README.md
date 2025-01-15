@@ -16,40 +16,19 @@
     - `python -m venv .venv`
     - `source .venv/bin/activate`
 - Install: `python -m pip install .`
-- Generate Ed25519 private key (Required for validator node): `python -m petals.cli.crypto.keygen`
+- Generate Ed25519 private key (Required for validator node): `python -m subnet.cli.crypto.keygen`
 
 <h4>Basic Usage</h4>
 
 Start your own subnet:
 
 ```bash
-python -m petals.cli.run_server_validator bigscience/bloom-560m --host_maddrs /ip4/0.0.0.0/tcp/{PORT} ip4/0.0.0.0/udp/{PORT}/quic --announce_maddrs ip4/{IP}/tcp/{PORT}/ip4/{IP}/udp/{PORT}/quic --identity_path {PRIVATE_KEY_PATH} --new_swarm
+python -m subnet.cli.run_server_validator bigscience/bloom-560m --host_maddrs /ip4/0.0.0.0/tcp/{PORT} ip4/0.0.0.0/udp/{PORT}/quic --announce_maddrs ip4/{IP}/tcp/{PORT}/ip4/{IP}/udp/{PORT}/quic --identity_path {PRIVATE_KEY_PATH} --new_swarm
 ```
 
 Start your own subnet validator node:
 
 ```bash
-python -m petals.cli.run_server_validator bigscience/bloom-560m --public_ip {IP} --port {PORT} --initial_peers {INITIAL_PEERS} --identity_path {PRIVATE_KEY_PATH}
+python -m subnet.cli.run_server_validator bigscience/bloom-560m --public_ip {IP} --port {PORT} --initial_peers {INITIAL_PEERS} --identity_path {PRIVATE_KEY_PATH}
 ```
 Instead of using `--initial_peers`, the `constants.py` file can be updated to include them. Read the full documentation or the `cli` directory for all available arguments.
-
-<hr>
-
-Generate text with distributed **Llama 3.1** (up to 405B), **Mixtral** (8x22B), **Falcon** (40B+) or **BLOOM** (176B) and fine‑tune them for your own tasks &mdash; right from your desktop computer or Google Colab:
-
-```python
-from transformers import AutoTokenizer
-from petals import AutoDistributedModelForCausalLM
-
-# Choose any model available at https://health.petals.dev
-model_name = "meta-llama/Meta-Llama-3.1-405B-Instruct"
-
-# Connect to a distributed network hosting model layers
-tokenizer = AutoTokenizer.from_pretrained(model_name)
-model = AutoDistributedModelForCausalLM.from_pretrained(model_name)
-
-# Run the model as if it were on your computer
-inputs = tokenizer("A cat sat", return_tensors="pt")["input_ids"]
-outputs = model.generate(inputs, max_new_tokens=5)
-print(tokenizer.decode(outputs[0]))  # A cat sat on a mat...
-```
