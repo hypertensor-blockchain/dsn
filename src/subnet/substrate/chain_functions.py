@@ -211,53 +211,6 @@ def remove_subnet(
 
   return submit_extrinsic()
 
-"""Not implemented yet"""
-def vote_subnet_subnet_node_dishonest(
-  substrate: SubstrateInterface,
-  keypair: Keypair,
-  subnet_id: int,
-  peer_id: str,
-):
-  """
-  Vote a subnet subnet_node dishonest to the blockchain
-
-  In production this call will trigger an event subscription to all other subnet_nodes
-  interfaced with Hypertensor. They will then run a check on the subnet_node to ensure
-  their by acting as a client and running an input to get the expected hash back.
-  If enough subnet_nodes vote this subnet_node as dishonest, they will be added to the blacklist
-  and removed from the blockchains storage.
-
-  :param substrate: interface to blockchain
-  :param keypair: keypair of extrinsic caller. Must be a subnet_node in the subnet
-  :param subnet_id: subnet ID
-  :param peer_id: subnet_node ID of the dishonest subnet_node
-
-  Note: It's important before calling this to ensure the entrinsic will be successful.
-        If the function reverts, the extrinsic is Pays::Yes
-  """
-  call = substrate.compose_call(
-    call_module='Network',
-    call_function='vote_subnet_subnet_node_dishonest',
-    call_params={
-      'subnet_id': subnet_id,
-      'peer_id': peer_id
-    }
-  )
-
-  # create signed extrinsic
-  extrinsic = substrate.create_signed_extrinsic(call=call, keypair=keypair)
-
-  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
-  def submit_extrinsic():
-    try:
-      with substrate as _substrate:
-        receipt = _substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
-        return receipt
-    except SubstrateRequestException as e:
-      print("Failed to send: {}".format(e))
-
-  return submit_extrinsic()
-
 def get_subnet_nodes(
   substrate: SubstrateInterface,
   subnet_id: int,
@@ -984,25 +937,6 @@ def get_min_subnet_nodes(substrate: SubstrateInterface):
 
   return make_query()
 
-def get_max_subnet_nodes(substrate: SubstrateInterface):
-  """
-  Function to get the maximum number of subnet_nodes allowed to host a subnet
-
-  :param SubstrateInterface: substrate interface from blockchain url
-  :returns: max_subnet_nodes
-  """
-
-  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
-  def make_query():
-    try:
-      with substrate as _substrate:
-        result = _substrate.query('Network', 'MaxSubnetNodes')
-        return result
-    except SubstrateRequestException as e:
-      print("Failed to get rpc request: {}".format(e))
-
-  return make_query()
-
 def get_min_stake_balance(substrate: SubstrateInterface):
   """
   Function to get the minimum stake balance required to host a subnet
@@ -1016,6 +950,25 @@ def get_min_stake_balance(substrate: SubstrateInterface):
     try:
       with substrate as _substrate:
         result = _substrate.query('Network', 'MinStakeBalance')
+        return result
+    except SubstrateRequestException as e:
+      print("Failed to get rpc request: {}".format(e))
+
+  return make_query()
+
+def get_max_subnet_nodes(substrate: SubstrateInterface):
+  """
+  Function to get the maximum number of subnet_nodes allowed to host a subnet
+
+  :param SubstrateInterface: substrate interface from blockchain url
+  :returns: max_subnet_nodes
+  """
+
+  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+  def make_query():
+    try:
+      with substrate as _substrate:
+        result = _substrate.query('Network', 'MaxSubnetNodes')
         return result
     except SubstrateRequestException as e:
       print("Failed to get rpc request: {}".format(e))
@@ -1040,36 +993,6 @@ def get_tx_rate_limit(substrate: SubstrateInterface):
       print("Failed to get rpc request: {}".format(e))
 
   return make_query()
-
-def get_min_required_subnet_consensus_submit_epochs(substrate: SubstrateInterface):
-  """
-  Function to get the minimum number of epochs required to submit subnet consensus
-
-  :param SubstrateInterface: substrate interface from blockchain url
-  :returns: min_required_subnet_consensus_submit_epochs
-  """
-
-  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
-  def make_query():
-    try:
-      with substrate as _substrate:
-        result = _substrate.query('Network', 'MinRequiredSubnetConsensusSubmitEpochs')
-        return result
-    except SubstrateRequestException as e:
-      print("Failed to get rpc request: {}".format(e))
-
-  return make_query()
-
-# def get_subnet_activated(substrate: SubstrateInterface, path: str):
-#   @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
-#   def make_query():
-#     try:
-#       result = substrate.query('Network', 'SubnetActivated', [path])
-#       return result
-#     except SubstrateRequestException as e:
-#       print("Failed to get rpc request: {}".format(e))
-
-#   return make_query()
 
 def get_epoch_length(substrate: SubstrateInterface):
   """

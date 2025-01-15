@@ -45,13 +45,13 @@ PEER_IDS = [
 ] 
 
 @dataclasses.dataclass
-class SubstrateConfig:
+class SubstrateConfigTest:
   interface: SubstrateInterface
   keypair: Keypair
   account_id: str
 
 def get_substrate_config(n: int):
-  return SubstrateConfig(
+  return SubstrateConfigTest(
     SubstrateInterface(url=LOCAL_URL),
     Keypair.create_from_uri(f"//{str(n)}"),
     Keypair.create_from_uri(f"//{str(n)}").ss58_address

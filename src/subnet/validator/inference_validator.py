@@ -6,7 +6,6 @@ import dataclasses
 import time
 import multiprocessing as mp
 
-# from subnet.substrate.config import load_subnet_config
 from subnet.validator.config import AccountantData, AccountantDataPeerParams, PeerInferenceResults, PeerInferenceSequenceData, PeerValidationData
 # from subnet.validator.routing.sequence_manager import MissingBlocksError
 # from subnet.data_structures import RemoteSpanInfo
@@ -78,7 +77,6 @@ class InferenceValidator(threading.Thread):
         # Blockchain information
         #
         self.model_id = None
-        # self.client = substrate_config.SubstrateConfig
         self.epoch = 0
 
         #
@@ -757,11 +755,11 @@ class InferenceValidator(threading.Thread):
     def _is_accountant(self) -> bool:
         """Check if is already an accountant classification"""
         # accountant_account_id = get_epoch_accountant(
-        #     SubstrateConfig.interface, 
-        #     SubstrateConfig.keypair,
+        #     SubstrateConfigCustom.interface, 
+        #     SubstrateConfigCustom.keypair,
         #     self.model_id
         # )
-        # if accountant_account_id == SubstrateConfig.account_id:
+        # if accountant_account_id == SubstrateConfigCustom.account_id:
         #     self.is_accountant = True
         # else:
         #     self.is_accountant = False
@@ -775,8 +773,8 @@ class InferenceValidator(threading.Thread):
     
     def _get_epoch(self):
         """Do math to get epoch number from blockchain"""
-        # block_hash = SubstrateConfig.interface.get_block_hash()
-        # block_number = SubstrateConfig.interface.get_block_number(block_hash)
+        # block_hash = SubstrateConfigCustom.interface.get_block_hash()
+        # block_number = SubstrateConfigCustom.interface.get_block_number(block_hash)
         # network_config = load_network_config()
         # min_required_model_consensus_submit_epochs = network_config.min_required_model_consensus_submit_epochs
         # min_required_peer_consensus_submit_epochs = network_config.min_required_peer_consensus_submit_epochs
@@ -798,7 +796,7 @@ class InferenceValidator(threading.Thread):
         Compare the current accountant data to self
         """
         # accountant_data = get_previous_accountant_data(
-        #     SubstrateConfig.interface, 
-        #     SubstrateConfig.keypair,
+        #     SubstrateConfigCustom.interface, 
+        #     SubstrateConfigCustom.keypair,
         #     self.model_id
         # )

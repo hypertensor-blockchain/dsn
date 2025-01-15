@@ -37,7 +37,7 @@ def main():
   )
   args = parser.parse_args()
 
-  # Choose any model available at dashboard.hypertensor.org
+  # Choose any model available at dash.hypertensor.org
   # model_name = "bigscience/bloom-560m"  # This one is fine-tuned Llama 2 (70B)
   # model_name = "NousResearch/Hermes-3-Llama-3.2-3B"
   model_name = "NousResearch/Llama-3.2-1B"

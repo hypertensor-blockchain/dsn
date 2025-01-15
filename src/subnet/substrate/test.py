@@ -20,7 +20,7 @@ from substrateinterface.exceptions import SubstrateRequestException
 from scalecodec.base import ScaleBytes, RuntimeConfiguration
 from scalecodec.type_registry import load_type_registry_preset
 from scalecodec.types import GenericCall
-from config import NetworkConfig, SubstrateConfig
+from config import SubstrateConfigCustom
 
 from typing import List, Dict, Union, Optional, Tuple, TypedDict, Any, TypeVar
 

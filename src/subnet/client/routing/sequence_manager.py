@@ -39,9 +39,7 @@ from dotenv import load_dotenv
 
 load_dotenv(os.path.join(Path.cwd(), '.env'))
 
-SUBNET_ID = os.getenv('SUBNET_ID')
 PHRASE = os.getenv('PHRASE')
-RPC = os.getenv('DEV_RPC')
 
 logger = get_logger(__name__)
 
@@ -103,7 +101,6 @@ class RemoteSequenceManager:
             state = SequenceManagerState()
         self.state = state
 
-        print("RemoteSequenceManager rpc", rpc)
         if dht is None:
             with open(f"{identity_path}", "rb") as f:
                 data = f.read()

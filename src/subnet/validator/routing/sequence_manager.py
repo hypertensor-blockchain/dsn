@@ -41,9 +41,7 @@ from dotenv import load_dotenv
 
 load_dotenv(os.path.join(Path.cwd(), '.env'))
 
-SUBNET_ID = os.getenv('SUBNET_ID')
 PHRASE = os.getenv('PHRASE')
-RPC = os.getenv('DEV_RPC')
 
 logger = get_logger(__name__)
 
@@ -92,7 +90,9 @@ class RemoteSequenceManager:
         *,
         dht: Optional[DHT] = None,
         state: Optional[SequenceManagerState] = None,
-        identity_path: Optional[str] = None
+        subnet_id: Optional[int] = None,
+        identity_path: Optional[str] = None,
+        rpc: Optional[str] = None,
     ):
         if config.initial_peers or dht is None:
             try:
@@ -133,7 +133,7 @@ class RemoteSequenceManager:
                 num_workers=32,
                 startup_timeout=config.daemon_startup_timeout,
                 start=True,
-                authorizer=POSAuthorizerLive(private_key, SUBNET_ID, SubstrateConfigCustom(PHRASE, RPC).interface)
+                authorizer=POSAuthorizerLive(private_key, subnet_id, SubstrateConfigCustom(PHRASE, rpc).interface)
                 # authorizer=POSAuthorizer(private_key)
             )
         assert isinstance(dht, DHT) and dht.is_alive(), "`dht` must be a running hivemind.DHT instance"

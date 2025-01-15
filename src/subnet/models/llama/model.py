@@ -211,17 +211,19 @@ class DistributedLlamaModelValidator(FromPretrainedMixinValidator, PTuneMixinVal
 
     def __init__(
         self, 
-        config: DistributedLlamaConfigValidator, 
+        config: DistributedLlamaConfig, 
         *, 
-        dht: Optional[hivemind.DHT] = None,
-        identity_path: Optional[str] = None
+        dht: Optional[hivemind.DHT] = None, 
+        subnet_id: Optional[int] = None,
+        identity_path: Optional[str] = None,
+        rpc: Optional[str] = None
     ):
         n_layer, config.num_hidden_layers = config.num_hidden_layers, 0  # Prevent initialization
         super().__init__(config)
         assert len(self.layers) == 0
         config.num_hidden_layers = n_layer
 
-        self.layers = RemoteSequentialValidator(config, dht=dht, identity_path=identity_path)
+        self.layers = RemoteSequentialValidator(config, dht=dht, subnet_id=subnet_id, identity_path=identity_path, rpc=rpc)
 
         self.requires_grad_(False)  # Forbid accumulate grads for embeddings and layernorm
         self.init_prompts(config)
@@ -325,9 +327,15 @@ class DistributedLlamaForCausalLMValidator(FromPretrainedMixinValidator, RemoteG
 
     config_class = DistributedLlamaConfigValidator
 
-    def __init__(self, config: DistributedLlamaConfigValidator, identity_path: Optional[str] = None):
+    def __init__(
+        self, 
+        config: DistributedLlamaConfig, 
+        subnet_id: Optional[int] = None,
+        identity_path: Optional[str] = None,
+        rpc: Optional[str] = None
+    ):
         LlamaPreTrainedModel.__init__(self, config)
-        self.model = DistributedLlamaModelValidator(config, identity_path=identity_path)
+        self.model = DistributedLlamaModelValidator(config, subnet_id=subnet_id, identity_path=identity_path, rpc=rpc)
         self.pretraining_tp = config.pretraining_tp
         self.vocab_size = config.vocab_size
         self.lm_head = LMHeadValidator(config)

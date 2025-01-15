@@ -1,14 +1,8 @@
-"""
-Miscellaneous
-"""
-import pickle
 from typing import List, Dict
 from subnet.substrate.chain_data import SubnetNode
 from subnet.substrate.chain_functions import get_subnet_nodes_included, get_subnet_nodes_submittable
-from subnet.substrate.config import PERCENTAGE_EPOCH_HEALTH_CONSENSUS_RECHECK
 from substrateinterface import SubstrateInterface
-from subnet.health.state_updater import ScoringProtocol, get_peers_scores
-from hivemind.utils.auth import AuthorizerBase
+from subnet.health.state_updater import ScoringProtocol
 
 # TODO: Clean this function up big time
 def get_blockchain_peers_consensus_data(
@@ -21,16 +15,7 @@ def get_blockchain_peers_consensus_data(
 
   """Get peers matching blockchain model peers"""
   """If model is broken it can return `None`"""
-  # peers_data = get_peers_data()
-  # return {
-  #   "model_state": "broken",
-  #   "peers": []
-  # }
-
-  # peers_data = get_peers_scores(authorizer)
-
   peers_data = scoring_protocol.run()
-  print("peers_data", peers_data)
 
   """
   If model is broken then send back `model_state` as broken with a blank `peers` array
@@ -295,58 +280,3 @@ def get_next_epoch_start_block(
 ) -> int:
   """Returns next start block for next epoch"""
   return epochs_length + (block - (block % epochs_length))
-
-"""Avoid querying the peers the block after submitting consensus, check the latter end of an epoch for model health"""
-def get_recheck_consensus_block(
-  block: int,
-  epochs_interval: int, 
-):
-  latter_blocks_span = int(epochs_interval * PERCENTAGE_EPOCH_HEALTH_CONSENSUS_RECHECK)
-
-  min_block = block - (block % epochs_interval) + epochs_interval - latter_blocks_span
-
-  return min_block
-
-"""Some utils to avoid querying the RPC blockchain nodes"""
-
-def save_unconfirm_consensus_count(count: int):
-  dbfile = open('unconfirm_consensus_count', 'wb')
-  pickle.dump(count, dbfile)                    
-  dbfile.close()
-
-def load_unconfirm_consensus_count():
-  try:
-    dbfile = open('unconfirm_consensus_count', 'rb')    
-    db = pickle.load(dbfile)
-    dbfile.close()
-    return db
-  except:
-    return 0
-
-def save_last_submit_consensus_block(block: int):
-  dbfile = open('last_submit_consensus_block', 'wb')
-  pickle.dump(block, dbfile)                    
-  dbfile.close()
-
-def load_last_submit_consensus_block():
-  try:
-    dbfile = open('last_submit_consensus_block', 'rb')    
-    db = pickle.load(dbfile)
-    dbfile.close()
-    return db
-  except:
-    return 0
-
-def save_last_unconfirm_consensus_block(block: int):
-  dbfile = open('last_unconfirm_consensus_block', 'wb')
-  pickle.dump(block, dbfile)                    
-  dbfile.close()
-
-def load_last_unconfirm_consensus_block():
-  try:
-    dbfile = open('last_unconfirm_consensus_block', 'rb')    
-    db = pickle.load(dbfile)
-    dbfile.close()
-    return db
-  except:
-    return 0

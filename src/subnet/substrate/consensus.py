@@ -272,8 +272,7 @@ class Consensus(threading.Thread):
   
   def _activate_subnet(self):
     """
-    TODO: optimize this logic and add proper logic for deactivation if subnet isn't able to be activated
-    Attempt to activate subnet
+    TODO: Accuracy on sleep based on reg blocks
 
     Will wait for subnet to be activated
 
@@ -285,8 +284,9 @@ class Consensus(threading.Thread):
       bool: True if subnet was successfully activated, False otherwise.
     """
     subnet_id = get_subnet_id_by_path(self.substrate_config.interface, self.path)
+    print("_activate_subnet subnet_id", subnet_id)
     if subnet_id.meta_info['result_found'] is False:
-      logger.error("Cannot find subnet at path: %s, shutting down", self.path)
+      logger.error("Cannot find subnet ID at path: %s, shutting down", self.path)
       self.shutdown()
       return False
     
@@ -294,8 +294,9 @@ class Consensus(threading.Thread):
       self.substrate_config.interface,
       int(str(subnet_id))
     )
+    print("_activate_subnet subnet_data", subnet_data)
     if subnet_data.meta_info['result_found'] is False:
-      logger.error("Cannot find subnet at ID: %s, shutting down", subnet_id)
+      logger.error("Cannot find subnet data at ID: %s, shutting down", subnet_id)
       self.shutdown()
       return False
 
@@ -341,14 +342,8 @@ class Consensus(threading.Thread):
     block_hash = self.substrate_config.interface.get_block_hash()
     block_number = self.substrate_config.interface.get_block_number(block_hash)
 
+    # If outside of activation period on both ways
     if block_number < min_node_activation_block or block_number >= max_node_activation_block:
-      # delta = min_node_activation_block - block_number
-      # logger.info(f"Waiting until activation block for {delta} blocks")
-      time.sleep(BLOCK_SECS)
-      self._activate_subnet()
-
-    # Redunant, but if we missed our turn to activate, wait until someone else has to start consensus
-    if block_number >= max_node_activation_block:
       time.sleep(BLOCK_SECS)
       self._activate_subnet()
 
@@ -369,6 +364,7 @@ class Consensus(threading.Thread):
         return True
 
       # Attempt to activate subnet
+      logger.info("Attempting to activate subnet")
       receipt = activate_subnet(
         self.substrate_config.interface,
         self.substrate_config.keypair,
@@ -376,20 +372,23 @@ class Consensus(threading.Thread):
       )
 
       if receipt.is_success is not True:
+        logger.warning("`activate_subnet` Extrinsic failed: Subnet activation failed")
         return False
 
       is_success = False
       for event in receipt.triggered_events:
         event_id = event.value['event']['event_id']
         if event_id is 'SubnetActivated':
+          logger.info("Subnet activation successful")
           is_success = True
         
       if is_success:
         self.subnet_accepting_consensus = True
         self.subnet_id = int(str(subnet_id))
         self.subnet_activated = True
-        logger.info("Subnet activated")
         return True
+      else:
+        logger.warning("Subnet activation failed, subnet didn't meet requirements")
 
     # check if subnet failed to be activated
     # this means:
