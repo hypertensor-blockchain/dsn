@@ -6,7 +6,7 @@ from hivemind.utils.auth import AuthorizerBase
 
 from subnet.health.state_updater import ScoringProtocol
 from subnet.substrate.chain_data import RewardsData
-from subnet.substrate.chain_functions import activate_subnet, attest, get_epoch_length, get_subnet_data, get_subnet_id_by_path, get_rewards_submission, get_rewards_validator, validate
+from subnet.substrate.chain_functions import activate_subnet, attest, get_block_number, get_epoch_length, get_subnet_data, get_subnet_id_by_path, get_rewards_submission, get_rewards_validator, validate
 from subnet.substrate.config import BLOCK_SECS, SubstrateConfigCustom
 from subnet.substrate.utils import get_consensus_data, get_next_epoch_start_block, get_submittable_nodes
 from hivemind.utils import get_logger
@@ -55,8 +55,8 @@ class Consensus(threading.Thread):
     while not self.stop.is_set():
       try:
         # get epoch
-        block_hash = self.substrate_config.interface.get_block_hash()
-        block_number = self.substrate_config.interface.get_block_number(block_hash)
+        block_number = get_block_number(self.substrate_config.interface)
+
         logger.info("Block height: %s " % block_number)
 
         epoch = int(block_number / self.epoch_length)
@@ -153,8 +153,7 @@ class Consensus(threading.Thread):
         while True:
           # wait for validator on every block
           time.sleep(BLOCK_SECS)
-          block_hash = self.substrate_config.interface.get_block_hash()
-          block_number = self.substrate_config.interface.get_block_number(block_hash)
+          block_number = get_block_number(self.substrate_config.interface)
           logger.info("Block height: %s " % block_number)
 
           epoch = int(block_number / self.epoch_length)
@@ -337,8 +336,7 @@ class Consensus(threading.Thread):
     min_node_activation_block = activation_block + BLOCK_SECS*10 * (n-1)
     max_node_activation_block = activation_block + BLOCK_SECS*10 * n
 
-    block_hash = self.substrate_config.interface.get_block_hash()
-    block_number = self.substrate_config.interface.get_block_number(block_hash)
+    block_number = get_block_number(self.substrate_config.interface)
 
     # If outside of activation period on both ways
     if block_number < min_node_activation_block or block_number >= max_node_activation_block:
