@@ -1,6 +1,7 @@
 import torch
 
 PUBLIC_INITIAL_PEERS = [
+  '/ip4/3.17.139.123/tcp/31330/p2p/12D3KooWGmoSHnvRsktrGzNTfCEwzY2TKAYPRtdaA9AwxHwLKfLa'
 ]
 
 # The reachability API is currently used only when connecting to the public swarm
