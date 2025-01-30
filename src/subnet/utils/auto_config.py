@@ -102,14 +102,11 @@ class DefaultRevisionMixin:
 class AutoDistributedConfig(DefaultRevisionMixin, _AutoDistributedBase):
     _mapping_field = "config"
 
-
 class AutoDistributedModel(DefaultRevisionMixin, _AutoDistributedBase):
     _mapping_field = "model"
 
-
 class AutoDistributedModelForCausalLM(DefaultRevisionMixin, _AutoDistributedBase):
     _mapping_field = "model_for_causal_lm"
-
 
 class AutoDistributedSpeculativeModel(DefaultRevisionMixin, _AutoDistributedBase):
     _mapping_field = "model_for_speculative"

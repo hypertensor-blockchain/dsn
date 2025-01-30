@@ -1,10 +1,21 @@
 from typing import Any, Optional
 from substrateinterface import SubstrateInterface, Keypair, ExtrinsicReceipt
 from substrateinterface.exceptions import SubstrateRequestException
-from tenacity import retry, stop_after_attempt, wait_exponential
+from tenacity import retry, stop_after_attempt, wait_exponential, wait_fixed
+from subnet.substrate.config import BLOCK_SECS
+from tenacity import RetryCallState
+
+retry_counter = 0
+
+def increment_counter(retry_state: RetryCallState):
+    global retry_counter
+    retry_counter += 1
+    print(f"Retry {retry_counter}: {retry_state}")
+
 
 def get_block_number(substrate: SubstrateInterface):
-  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+  # @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
   def make_query():
     try:
       with substrate as _substrate:
@@ -46,14 +57,25 @@ def validate(
     }
   )
 
-  # create signed extrinsic
-  extrinsic = substrate.create_signed_extrinsic(call=call, keypair=keypair)
-
-  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+  # @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4), after=increment_counter)
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4), after=increment_counter)
   def submit_extrinsic():
     try:
       with substrate as _substrate:
+        # get none on retries
+        nonce = _substrate.get_account_nonce(keypair.ss58_address)
+
+        # create signed extrinsic
+        extrinsic = _substrate.create_signed_extrinsic(call=call, keypair=keypair, nonce=nonce)
+
         receipt = _substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
+        if receipt.is_success:
+          print('✅ Success, triggered events:')
+          for event in receipt.triggered_events:
+              print(f'* {event.value}')
+        else:
+            print('⚠️ Extrinsic Failed: ', receipt.error_message)
+
         return receipt
     except SubstrateRequestException as e:
       print("Failed to send: {}".format(e))
@@ -86,14 +108,26 @@ def attest(
     }
   )
 
-  # create signed extrinsic
-  extrinsic = substrate.create_signed_extrinsic(call=call, keypair=keypair)
-
-  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+  # @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4), after=increment_counter)
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4), after=increment_counter)
   def submit_extrinsic():
     try:
       with substrate as _substrate:
+        # get none on retries
+        nonce = _substrate.get_account_nonce(keypair.ss58_address)
+
+        # create signed extrinsic
+        extrinsic = _substrate.create_signed_extrinsic(call=call, keypair=keypair, nonce=nonce)
+
         receipt = _substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
+
+        if receipt.is_success:
+          print('✅ Success, triggered events:')
+          for event in receipt.triggered_events:
+              print(f'* {event.value}')
+        else:
+            print('⚠️ Extrinsic Failed: ', receipt.error_message)
+
         return receipt
     except SubstrateRequestException as e:
       print("Failed to send: {}".format(e))
@@ -130,7 +164,7 @@ def register_subnet(
   # create signed extrinsic
   extrinsic = substrate.create_signed_extrinsic(call=call, keypair=keypair)
 
-  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
   def submit_extrinsic():
     try:
       with substrate as _substrate:
@@ -162,13 +196,17 @@ def activate_subnet(
     }
   )
 
-  # create signed extrinsic
-  extrinsic = substrate.create_signed_extrinsic(call=call, keypair=keypair)
-
-  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+  # @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
   def submit_extrinsic():
     try:
       with substrate as _substrate:
+        # get none on retries
+        nonce = _substrate.get_account_nonce(keypair.ss58_address)
+
+        # create signed extrinsic
+        extrinsic = _substrate.create_signed_extrinsic(call=call, keypair=keypair, nonce=nonce)
+
         receipt = _substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
         return receipt
     except SubstrateRequestException as e:
@@ -200,7 +238,7 @@ def remove_subnet(
   # create signed extrinsic
   extrinsic = substrate.create_signed_extrinsic(call=call, keypair=keypair)
 
-  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
   def submit_extrinsic():
     try:
       with substrate as _substrate:
@@ -221,7 +259,7 @@ def get_subnet_nodes(
   :param SubstrateInterface: substrate interface from blockchain url
   :returns: subnet_nodes_data
   """
-  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
   def make_rpc_request():
     try:
       with substrate as _substrate:
@@ -248,7 +286,7 @@ def get_subnet_nodes_included(
   :param SubstrateInterface: substrate interface from blockchain url
   :returns: subnet_nodes_data
   """
-  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
   def make_rpc_request():
     try:
       with substrate as _substrate:
@@ -256,7 +294,6 @@ def get_subnet_nodes_included(
           method='network_getSubnetNodesIncluded',
           params=[subnet_id]
         )
-        print("get_subnet_nodes_included subnet_nodes_data", subnet_nodes_data)
       return subnet_nodes_data
     except SubstrateRequestException as e:
       print("Failed to get rpc request: {}".format(e))
@@ -273,7 +310,7 @@ def get_subnet_nodes_submittable(
   :param SubstrateInterface: substrate interface from blockchain url
   :returns: subnet_nodes_data
   """
-  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
   def make_rpc_request():
     try:
       with substrate as _substrate:
@@ -300,7 +337,7 @@ async def get_consensus_data(
   :param SubstrateInterface: substrate interface from blockchain url
   :returns: subnet_nodes_data
   """
-  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
   def make_rpc_request():
     try:
       with substrate as _substrate:
@@ -328,7 +365,7 @@ async def get_accountant_data(
   :param SubstrateInterface: substrate interface from blockchain url
   :returns: subnet_nodes_data
   """
-  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
   def make_rpc_request():
     try:
       with substrate as _substrate:
@@ -356,7 +393,7 @@ def is_subnet_node_by_peer_id(
   :param SubstrateInterface: substrate interface from blockchain url
   :returns: subnet_nodes_data
   """
-  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
   def make_rpc_request():
     try:
       with substrate as _substrate:
@@ -383,7 +420,7 @@ def get_minimum_subnet_nodes(
   :param SubstrateInterface: substrate interface from blockchain url
   :returns: subnet_nodes_data
   """
-  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
   def make_rpc_request():
     try:
       with substrate as _substrate:
@@ -409,7 +446,7 @@ def get_minimum_delegate_stake(
   :param SubstrateInterface: substrate interface from blockchain url
   :returns: subnet_nodes_data
   """
-  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
   def make_rpc_request():
     try:
       with substrate as _substrate:
@@ -435,7 +472,7 @@ def get_subnet_node_info(
   :param SubstrateInterface: substrate interface from blockchain url
   :returns: subnet_nodes_data
   """
-  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
   def make_rpc_request():
     try:
       with substrate as _substrate:
@@ -482,13 +519,16 @@ def add_subnet_node(
     }
   )
 
-  # create signed extrinsic
-  extrinsic = substrate.create_signed_extrinsic(call=call, keypair=keypair)
-
-  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
   def submit_extrinsic():
     try:
       with substrate as _substrate:
+        # get none on retries
+        nonce = _substrate.get_account_nonce(keypair.ss58_address)
+
+        # create signed extrinsic
+        extrinsic = _substrate.create_signed_extrinsic(call=call, keypair=keypair, nonce=nonce)
+
         receipt = _substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
         return receipt
     except SubstrateRequestException as e:
@@ -527,13 +567,16 @@ def register_subnet_node(
     }
   )
 
-  # create signed extrinsic
-  extrinsic = substrate.create_signed_extrinsic(call=call, keypair=keypair)
-
-  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
   def submit_extrinsic():
     try:
       with substrate as _substrate:
+        # get none on retries
+        nonce = _substrate.get_account_nonce(keypair.ss58_address)
+
+        # create signed extrinsic
+        extrinsic = _substrate.create_signed_extrinsic(call=call, keypair=keypair, nonce=nonce)
+
         receipt = _substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
         return receipt
     except SubstrateRequestException as e:
@@ -562,13 +605,16 @@ def activate_subnet_node(
     }
   )
 
-  # create signed extrinsic
-  extrinsic = substrate.create_signed_extrinsic(call=call, keypair=keypair)
-
-  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
   def submit_extrinsic():
     try:
       with substrate as _substrate:
+        # get none on retries
+        nonce = _substrate.get_account_nonce(keypair.ss58_address)
+
+        # create signed extrinsic
+        extrinsic = _substrate.create_signed_extrinsic(call=call, keypair=keypair, nonce=nonce)
+
         receipt = _substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
         return receipt
     except SubstrateRequestException as e:
@@ -597,13 +643,16 @@ def deactivate_subnet_node(
     }
   )
 
-  # create signed extrinsic
-  extrinsic = substrate.create_signed_extrinsic(call=call, keypair=keypair)
-
-  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
   def submit_extrinsic():
     try:
       with substrate as _substrate:
+        # get none on retries
+        nonce = _substrate.get_account_nonce(keypair.ss58_address)
+
+        # create signed extrinsic
+        extrinsic = _substrate.create_signed_extrinsic(call=call, keypair=keypair, nonce=nonce)
+
         receipt = _substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
         return receipt
     except SubstrateRequestException as e:
@@ -635,13 +684,16 @@ def remove_subnet_node(
     }
   )
 
-  # create signed extrinsic
-  extrinsic = substrate.create_signed_extrinsic(call=call, keypair=keypair)
-
-  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
   def submit_extrinsic():
     try:
       with substrate as _substrate:
+        # get none on retries
+        nonce = _substrate.get_account_nonce(keypair.ss58_address)
+
+        # create signed extrinsic
+        extrinsic = _substrate.create_signed_extrinsic(call=call, keypair=keypair, nonce=nonce)
+
         receipt = _substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
         return receipt
     except SubstrateRequestException as e:
@@ -673,13 +725,16 @@ def add_to_stake(
     }
   )
 
-  # create signed extrinsic
-  extrinsic = substrate.create_signed_extrinsic(call=call, keypair=keypair)
-
-  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
   def submit_extrinsic():
     try:
       with substrate as _substrate:
+        # get none on retries
+        nonce = _substrate.get_account_nonce(keypair.ss58_address)
+
+        # create signed extrinsic
+        extrinsic = _substrate.create_signed_extrinsic(call=call, keypair=keypair, nonce=nonce)
+
         receipt = _substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
         return receipt
     except SubstrateRequestException as e:
@@ -714,13 +769,16 @@ def remove_stake(
     }
   )
 
-  # create signed extrinsic
-  extrinsic = substrate.create_signed_extrinsic(call=call, keypair=keypair)
-
-  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
   def submit_extrinsic():
     try:
       with substrate as _substrate:
+        # get none on retries
+        nonce = _substrate.get_account_nonce(keypair.ss58_address)
+
+        # create signed extrinsic
+        extrinsic = _substrate.create_signed_extrinsic(call=call, keypair=keypair, nonce=nonce)
+
         receipt = _substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
         return receipt
     except SubstrateRequestException as e:
@@ -752,13 +810,16 @@ def add_to_delegate_stake(
     }
   )
 
-  # create signed extrinsic
-  extrinsic = substrate.create_signed_extrinsic(call=call, keypair=keypair)
-
-  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
   def submit_extrinsic():
     try:
       with substrate as _substrate:
+        # get none on retries
+        nonce = _substrate.get_account_nonce(keypair.ss58_address)
+
+        # create signed extrinsic
+        extrinsic = _substrate.create_signed_extrinsic(call=call, keypair=keypair, nonce=nonce)
+
         receipt = _substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
         return receipt
     except SubstrateRequestException as e:
@@ -777,7 +838,7 @@ def get_balance(
   :param address: address of account_id
   :returns: account balance
   """
-  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
   def make_query():
     try:
       with substrate as _substrate:
@@ -800,7 +861,7 @@ def get_subnet_stake_balance(
   :param address: address of account_id
   :returns: account stake balance towards subnet
   """
-  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
   def make_query():
     try:
       with substrate as _substrate:
@@ -823,7 +884,7 @@ def get_subnet_node_account(
   :param peer_id: peer_id of subnet validator
   :returns: account_id of subnet_id => peer_id
   """
-  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
   def make_query():
     try:
       with substrate as _substrate:
@@ -844,7 +905,7 @@ def get_subnet_accounts(
   :param SubstrateInterface: substrate interface from blockchain url
   :returns: account_id's of subnet_id
   """
-  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
   def make_query():
     try:
       with substrate as _substrate:
@@ -866,7 +927,7 @@ def get_subnet_id_by_path(
   :param path: path of subnet
   :returns: subnet_id
   """
-  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
   def make_query():
     try:
       with substrate as _substrate:
@@ -888,7 +949,7 @@ def get_subnet_data(
   :param id: id of subnet
   :returns: subnet_id
   """
-  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
   def make_query():
     try:
       with substrate as _substrate:
@@ -907,7 +968,7 @@ def get_max_subnets(substrate: SubstrateInterface):
   :returns: max_subnets
   """
 
-  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
   def make_query():
     try:
       with substrate as _substrate:
@@ -926,7 +987,7 @@ def get_min_subnet_nodes(substrate: SubstrateInterface):
   :returns: min_subnet_nodes
   """
 
-  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
   def make_query():
     try:
       with substrate as _substrate:
@@ -945,7 +1006,7 @@ def get_min_stake_balance(substrate: SubstrateInterface):
   :returns: min_stake_balance
   """
 
-  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
   def make_query():
     try:
       with substrate as _substrate:
@@ -964,7 +1025,7 @@ def get_max_subnet_nodes(substrate: SubstrateInterface):
   :returns: max_subnet_nodes
   """
 
-  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
   def make_query():
     try:
       with substrate as _substrate:
@@ -983,7 +1044,7 @@ def get_tx_rate_limit(substrate: SubstrateInterface):
   :returns: tx_rate_limit
   """
   
-  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
   def make_query():
     try:
       with substrate as _substrate:
@@ -1002,7 +1063,7 @@ def get_epoch_length(substrate: SubstrateInterface):
   :returns: epoch_length
   """
 
-  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
   def make_query():
     try:
       with substrate as _substrate:
@@ -1025,7 +1086,7 @@ def get_rewards_validator(
   :returns: epoch_length
   """
 
-  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
   def make_query():
     try:
       with substrate as _substrate:
@@ -1048,7 +1109,7 @@ def get_rewards_submission(
   :returns: epoch_length
   """
 
-  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
   def make_query():
     try:
       with substrate as _substrate:
@@ -1067,7 +1128,7 @@ def get_min_subnet_registration_blocks(substrate: SubstrateInterface):
   :returns: epoch_length
   """
 
-  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
   def make_query():
     try:
       with substrate as _substrate:
@@ -1086,7 +1147,7 @@ def get_max_subnet_registration_blocks(substrate: SubstrateInterface):
   :returns: epoch_length
   """
 
-  @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
   def make_query():
     try:
       with substrate as _substrate:

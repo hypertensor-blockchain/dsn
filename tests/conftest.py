@@ -4,7 +4,8 @@ from contextlib import suppress
 
 import psutil
 import pytest
-from hivemind.utils.crypto import RSAPrivateKey
+# from hivemind.utils.crypto import RSAPrivateKey
+from hivemind.utils.crypto import Ed25519PrivateKey
 from hivemind.utils.logging import get_logger
 from hivemind.utils.mpfuture import MPFuture
 
@@ -31,8 +32,10 @@ def event_loop():
 def cleanup_children():
     yield
 
-    with RSAPrivateKey._process_wide_key_lock:
-        RSAPrivateKey._process_wide_key = None
+    # with RSAPrivateKey._process_wide_key_lock:
+    #     RSAPrivateKey._process_wide_key = None
+    with Ed25519PrivateKey._process_wide_key_lock:
+        Ed25519PrivateKey._process_wide_key = None
 
     gc.collect()  # Call .__del__() for removed objects
 

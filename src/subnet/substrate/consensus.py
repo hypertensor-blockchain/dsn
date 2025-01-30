@@ -1,6 +1,8 @@
 from dataclasses import asdict
+from enum import Enum
 import threading
 import time
+from typing import Optional, Tuple
 
 from hivemind.utils.auth import AuthorizerBase
 
@@ -8,11 +10,16 @@ from subnet.health.state_updater import ScoringProtocol
 from subnet.substrate.chain_data import RewardsData
 from subnet.substrate.chain_functions import activate_subnet, attest, get_block_number, get_epoch_length, get_subnet_data, get_subnet_id_by_path, get_rewards_submission, get_rewards_validator, validate
 from subnet.substrate.config import BLOCK_SECS, SubstrateConfigCustom
-from subnet.substrate.utils import get_consensus_data, get_next_epoch_start_block, get_submittable_nodes
+from subnet.substrate.utils import get_consensus_data, get_next_epoch_start_block, get_submittable_nodes, safe_div
 from hivemind.utils import get_logger
-import gc
 
 logger = get_logger(__name__)
+
+class AttestReason(Enum):
+  WAITING = 1
+  ATTESTED = 2
+  ATTEST_FAILED = 3
+  SHOULD_NOT_ATTEST = 4
 
 class Consensus(threading.Thread):
   """
@@ -39,6 +46,8 @@ class Consensus(threading.Thread):
 
     self.substrate_config = substrate
     self.account_id = substrate.account_id
+
+    self.previous_epoch_data = None
 
     # blockchain constants
     self.epoch_length = int(str(get_epoch_length(self.substrate_config.interface)))
@@ -134,9 +143,19 @@ class Consensus(threading.Thread):
         if is_validator:
           logger.info("We're the chosen validator for epoch %s, validating and auto-attesting..." % epoch)
           # check if validated 
-          validated = False
-          if validated is False:
-            self.validate()
+          validated = self._get_validator_consensus_submission(epoch)
+          if validated == None:
+            success = self.validate()
+            # update last validated epoch and continue (this validates and attests in one call)
+            if success:
+              self.last_validated_or_attested_epoch = epoch
+            else:
+              logger.warning("Consensus submission unsuccessful, waiting until next block to try again")
+              time.sleep(BLOCK_SECS)
+              continue
+          else:
+            # if for any reason on the last attempt it succeeded but didn't propogate
+            # because this section should only be called once per epoch and if validator until successful submission of data
             self.last_validated_or_attested_epoch = epoch
 
           # continue to next epoch, no need to attest
@@ -148,7 +167,6 @@ class Consensus(threading.Thread):
 
         # get epoch before waiting for validator to validate to ensure we don't get stuck 
         initial_epoch = epoch
-        attestation_complete = False
         logger.info("Starting attestation check")
         while True:
           # wait for validator on every block
@@ -159,15 +177,34 @@ class Consensus(threading.Thread):
           epoch = int(block_number / self.epoch_length)
           logger.info("Epoch: %s " % epoch)
 
+          next_epoch_start_block = get_next_epoch_start_block(
+            self.epoch_length, 
+            block_number
+          )
+          remaining_blocks_until_next_epoch = next_epoch_start_block - block_number
+
           # If we made it to the next epoch, break
           # This likely means the chosen validator never submitted consensus data
           if epoch > initial_epoch:
-            logger.info("Validator didn't submit consensus data, moving to the next epoch: %s" % epoch)
+            logger.info("Validator didn't submit epoch %s consensus data, moving to the next epoch" % epoch)
             break
 
-          result = self.attest(epoch)
-          if result == None:
-            # If None, still waiting for validator to submit data
+          attest_result, reason = self.attest(epoch)
+          if attest_result == False:
+            if reason == AttestReason.WAITING or reason == AttestReason.ATTEST_FAILED:
+              continue
+            elif reason == AttestReason.ATTESTED:
+              break
+            elif reason == AttestReason.SHOULD_NOT_ATTEST:
+              # sleep until end of epoch to check if we should attest
+              """
+              IF:
+               1. Validator submits data
+               2. Node leaves subnet on the same block
+              """
+              time.sleep()
+              continue
+            # If False, still waiting for validator to submit data
             continue
           else:
             # successful attestation, break and go to next epoch
@@ -176,41 +213,45 @@ class Consensus(threading.Thread):
       except Exception as e:
         logger.error("Consensus Error: %s" % e, exc_info=True)
 
-  def validate(self):
+  def validate(self) -> bool:
     """Get rewards data and submit consensus"""
     # TODO: Add exception handling
     consensus_data = self._get_consensus_data()
-    self._do_validate(consensus_data["peers"])
+    return self._do_validate(consensus_data["peers"])
 
-  def attest(self, epoch: int):
+  def attest(self, epoch: int) -> Tuple[bool, AttestReason]:
     """Get rewards data from another validator and attest that data if valid"""
     validator_consensus_submission = self._get_validator_consensus_submission(epoch)
 
     if validator_consensus_submission == None:
       logger.info("Waiting for validator to submit")
-      return None
+      return False, AttestReason.WAITING
 
     # backup check if validator node restarts in the middle of an epoch to ensure they don't tx again
     if self._has_attested(validator_consensus_submission["attests"]):
       logger.info("Has attested already")
-      return None
+      return False, AttestReason.ATTESTED
     
     validator_consensus_data = RewardsData.list_from_scale_info(validator_consensus_submission["data"])
     
     logger.info("Checking if we should attest the validators submission")
     logger.info("Generating consensus data")
     consensus_data = self._get_consensus_data() # should always return `peers` key
-    should_attest = self.should_attest(validator_consensus_data, consensus_data["peers"])
+    should_attest = self.should_attest(validator_consensus_data, consensus_data["peers"], epoch)
     logger.info("Should attest is: %s", should_attest)
 
     if should_attest:
       logger.info("Validators data is confirmed valid, attesting data...")
-      return self._do_attest()
+      attest_is_success = self._do_attest()
+      if attest_is_success:
+        return True, AttestReason.ATTESTED
+      else:
+        return False, AttestReason.ATTEST_FAILED
     else:
       logger.info("Validators data is not valid, skipping attestation.")
-      return None
+      return False, AttestReason.SHOULD_NOT_ATTEST
     
-  def _do_validate(self, data):
+  def _do_validate(self, data) -> bool:
     try:
       receipt = validate(
         self.substrate_config.interface,
@@ -218,22 +259,22 @@ class Consensus(threading.Thread):
         self.subnet_id,
         data
       )
-      return receipt
+      return receipt.is_success
     except Exception as e:
       logger.error("Validation Error: %s" % e)
-      return None
+      return False
 
-  def _do_attest(self):
+  def _do_attest(self) -> bool:
     try:
       receipt = attest(
         self.substrate_config.interface,
         self.substrate_config.keypair,
         self.subnet_id,
       )
-      return receipt
+      return receipt.is_success
     except Exception as e:
       logger.error("Attestation Error: %s" % e)
-      return None
+      return False
     
   def _get_consensus_data(self):
     """"""
@@ -254,10 +295,10 @@ class Consensus(threading.Thread):
     )
     return rewards_submission
 
-  def _has_attested(self, attested_account_ids) -> bool:
+  def _has_attested(self, attestations) -> bool:
     """Get and return the consensus data from the current validator"""
-    for account_id in attested_account_ids:
-      if account_id == self.account_id:
+    for data in attestations:
+      if data[0] == self.account_id:
         return True
     return False
 
@@ -339,9 +380,18 @@ class Consensus(threading.Thread):
     block_number = get_block_number(self.substrate_config.interface)
 
     # If outside of activation period on both ways
-    if block_number < min_node_activation_block or block_number >= max_node_activation_block:
+    if block_number < min_node_activation_block:
+      delta = min_node_activation_block - block_number
+      time.sleep(BLOCK_SECS*delta)
+      self._activate_subnet()
+    
+    # someone of me should have activated by now, keep iterating
+    # this will print a warning to manually activate
+    if block_number >= max_node_activation_block:
+      logger.warning("We skipped subnet activation, attempt to manually activate")
       time.sleep(BLOCK_SECS)
       self._activate_subnet()
+
 
     # if within our designated activation block, then activate
     # activation is a no-weight transaction, meaning it costs nothing to do
@@ -352,6 +402,7 @@ class Consensus(threading.Thread):
         int(str(subnet_id))
       )
 
+      # check if already activated
       if subnet_data['activated'] > 0:
         self.subnet_accepting_consensus = True
         self.subnet_id = int(str(subnet_id))
@@ -360,6 +411,7 @@ class Consensus(threading.Thread):
         return True
 
       # Attempt to activate subnet
+      # at this point we assume the subnet is not activated yet
       logger.info("Attempting to activate subnet")
       receipt = activate_subnet(
         self.substrate_config.interface,
@@ -368,15 +420,16 @@ class Consensus(threading.Thread):
       )
 
       if receipt.is_success is not True:
-        logger.warning("`activate_subnet` Extrinsic failed: Subnet activation failed")
+        logger.warning("`activate_subnet` Extrinsic failed: Subnet activation failed, check if activated")
         return False
 
       is_success = False
       for event in receipt.triggered_events:
         event_id = event.value['event']['event_id']
-        if event_id is 'SubnetActivated':
+        if event_id == 'SubnetActivated':
           logger.info("Subnet activation successful")
           is_success = True
+          break
         
       if is_success:
         self.subnet_accepting_consensus = True
@@ -392,16 +445,11 @@ class Consensus(threading.Thread):
     # or the subnet didn't meet its activation requirements and should revert on the next ``_activate_subnet`` call
     return False
 
-  def should_attest(self, validator_data, my_data):
+  def should_attest(self, validator_data, my_data, epoch):
     """Checks if two arrays of dictionaries match, regardless of order."""
 
-    # if data length differs and validator did upload data, return False
-    # this means the validator thinks the subnet is broken, but we do not
-    if len(validator_data) != len(my_data) and len(validator_data) > 0:
-      return False
-
     # if validator submitted no data, and we have also found the subnet is broken
-    if len(validator_data) == len(my_data) and len(validator_data) == 0:
+    if len(validator_data) == 0 and len(my_data) == 0:
       return True
     
     # otherwise, check the data matches
@@ -415,11 +463,33 @@ class Consensus(threading.Thread):
     # Convert my_data to a set
     set2 = set(frozenset(d.items()) for d in my_data)
 
-    intersection = set1.intersection(set2)
-    logger.info("Matching intersection of %s validator data" % ((len(intersection))/len(set1) * 100))
-    logger.info("Validator matching intersection of %s my data" % ((len(intersection))/len(set2) * 100))
+    success = set1 == set2
 
-    return set1 == set2
+    """
+    The following accounts for nodes that go down or back up in the after or before validation submissions and attestations
+    - If nodes leaves DHT before before validator submit consensus and returns after before attestation
+    - If node leaves DHT after validator submits consensus but still available on the blockchain
+    We check the previous epochs data to see if the validator did submit before they left
+    """
+    if not success and self.previous_epoch_data is not None:
+      dif = set1.symmetric_difference(set2)      
+      success = dif.issubset(self.previous_epoch_data)
+    elif not success and self.previous_epoch_data is None:
+      """
+      If this is the nodes first epoch, check last epochs consensus data
+      """
+      previous_epoch_validator_data = self._get_validator_consensus_submission(epoch-1)
+      previous_epoch_data_onchain = set(frozenset(asdict(d).items()) for d in previous_epoch_validator_data)
+      dif = set1.symmetric_difference(set2)
+      success = dif.issubset(previous_epoch_data_onchain)
+    else:
+      intersection = set1.intersection(set2)
+      logger.info("Matching intersection of %s validator data" % (safe_div(len(intersection), len(set1)) * 100))
+      logger.info("Validator matching intersection of %s my data" % (safe_div(len(intersection), len(set2)) * 100))
+
+    self.previous_epoch_data = set2
+
+    return success
 
   def shutdown(self):
     self.stop.set()

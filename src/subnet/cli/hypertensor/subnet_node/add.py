@@ -27,7 +27,7 @@ def main():
     parser.add_argument("--b", type=str, required=False, default=None, help="Non-unique value for subnet node")
     parser.add_argument("--c", type=str, required=False, default=None, help="Non-unique value for subnet node")
     parser.add_argument("--local", action="store_true", help="Run in local mode, uses LOCAL_RPC")
-    parser.add_argument("--phrase", type=str, required=False, default="PHRASE", help="Phrase env title")
+    parser.add_argument("--phrase", type=str, required=False, help="Mnemonic phrase for testing")
 
     args = parser.parse_args()
     local = args.local
@@ -36,7 +36,11 @@ def main():
     else:
         rpc = os.getenv('DEV_RPC')
 
-    substrate = SubstrateConfigCustom(PHRASE, rpc)
+    phrase = args.phrase
+    if phrase is not None:
+        substrate = SubstrateConfigCustom(phrase, rpc)
+    else:
+        substrate = SubstrateConfigCustom(PHRASE, rpc)
 
     subnet_id = args.subnet_id
     peer_id = args.peer_id

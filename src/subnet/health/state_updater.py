@@ -76,8 +76,9 @@ class ScoringProtocol():
                 f_initial_peers_tuple = tuple(f_initial_peers_literal_eval)
                 initial_peers = f_initial_peers_tuple
             except Exception as e:
-                logger.error("TEMP_INITIAL_PEERS_LOCATION error: %s" % e)
+                logger.warning("TEMP_INITIAL_PEERS_LOCATION error: %s" % e)
 
+        print("__ini__ initial_peers", initial_peers)
         self.dht = hivemind.DHT(
             initial_peers=initial_peers, 
             client_mode=True, 

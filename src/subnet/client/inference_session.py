@@ -286,6 +286,7 @@ class InferenceSession:
         inputs: torch.Tensor,
         prompts: Optional[torch.Tensor] = None,
         hypo_ids: Optional[torch.Tensor] = None,
+        max_retries: Optional[int] = None,
     ) -> torch.Tensor:
         assert not self._closed
         if torch.is_grad_enabled():
@@ -347,7 +348,7 @@ class InferenceSession:
                     self._sequence_manager.on_request_failure(
                         server_session.span.peer_id if server_session is not None else None
                     )
-                    if attempt_no + 1 == self._sequence_manager.config.max_retries:
+                    if attempt_no + 1 == self._sequence_manager.config.max_retries or attempt_no + 1 == max_retries:
                         raise
                     delay = self._sequence_manager.get_retry_delay(attempt_no)
                     logger.warning(

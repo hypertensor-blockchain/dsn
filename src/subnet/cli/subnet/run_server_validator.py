@@ -11,7 +11,7 @@ from hivemind.utils import limits
 from hivemind.utils.logging import get_logger
 from hivemind.proto import crypto_pb2
 from hivemind.utils.crypto import Ed25519PrivateKey
-from hivemind.utils.auth import POSAuthorizer, POSAuthorizerLive
+from hivemind.utils.auth import POSAuthorizerLive
 
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
@@ -181,11 +181,13 @@ def main():
                         help="List of pre-loaded LoRA adapters that can be used for inference or training")
 
     parser.add_argument("--local", action="store_true", help="Run in local mode, uses LOCAL_RPC")
+    parser.add_argument("--no_consensus", action="store_true", help="Don't start consensus")
 
     # fmt:on
     args = vars(parser.parse_args())
     args.pop("config", None)
     local = args.pop("local")
+    no_consensus = args.pop("no_consensus")
 
     args["converted_model_name_or_path"] = args.pop("model") or args["converted_model_name_or_path"]
 
@@ -249,13 +251,14 @@ def main():
             key_data = crypto_pb2.PrivateKey.FromString(data).data
             raw_private_key = ed25519.Ed25519PrivateKey.from_private_bytes(key_data[:32])
             private_key = Ed25519PrivateKey(private_key=raw_private_key)
-        # authorizer = POSAuthorizer(private_key)
 
         subnet_id = get_subnet_id_by_path(
             substrate.interface, 
             args["converted_model_name_or_path"]
         )
-        authorizer = POSAuthorizerLive(private_key, int(str(subnet_id)), substrate.interface)
+
+        # authorizer = POSAuthorizer(private_key)
+        authorizer = POSAuthorizerLive(private_key, int(str(subnet_id)), substrate.interface)        
 
     server = Server(
         **args,
@@ -266,6 +269,7 @@ def main():
         authorizer=authorizer,
         subnet_id=subnet_id,
         substrate=substrate,
+        no_consensus=no_consensus,
     )
     try:
         server.run()

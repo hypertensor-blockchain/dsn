@@ -84,11 +84,16 @@ class DummyCustomSequenceManager(RemoteSequenceManager):
             # Please revert to BLOCKWISE_8BIT once this is fixed: https://github.com/learning-at-home/hivemind/issues/572
         return metadata
 
+# pytest tests/test_remote_sequential.py::test_remote_sequential_prompts -rP
 
 @pytest.mark.forked
 def test_remote_sequential_prompts(batch_size=2, seq_len=5, pre_seq_len=3):
     config = AutoDistributedConfig.from_pretrained(MODEL_NAME, initial_peers=INITIAL_PEERS)
-    remote_sequential = RemoteSequential(config)
+    # remote_sequential = RemoteSequential(config)
+    remote_sequential = RemoteSequential(
+        config, 
+        identity_path="private_key.key",
+    )
 
     inputs = F.normalize(torch.randn(batch_size, seq_len, config.hidden_size), dim=-1)
     output_proj = F.normalize(torch.randn(batch_size, seq_len + pre_seq_len, config.hidden_size), dim=-1)

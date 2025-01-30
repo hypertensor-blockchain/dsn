@@ -3,6 +3,9 @@ from subnet.substrate.chain_data import SubnetNode
 from subnet.substrate.chain_functions import get_subnet_nodes_included, get_subnet_nodes_submittable
 from substrateinterface import SubstrateInterface
 from subnet.health.state_updater import ScoringProtocol
+from hivemind.utils import get_logger
+
+logger = get_logger(__name__)
 
 # TODO: Clean this function up big time
 def get_blockchain_peers_consensus_data(
@@ -161,19 +164,23 @@ def get_consensus_data(
     subnet_id: int, 
     scoring_protocol: ScoringProtocol
   ) -> Dict:
-  print("get_consensus_data....")
   result = get_subnet_nodes_included(
     substrate,
     subnet_id
   )
 
   if result is None:
+    logger.warning("Included subnet nodes is None")
     return {
       "model_state": "broken",
       "peers": []
     }
 
+  logger.info("Retrieved included subnet nodes from Hypertensor")
+
   subnet_nodes_data = SubnetNode.list_from_vec_u8(result["result"])
+
+  logger.info("Retrieved subnet nodes: ", subnet_nodes_data)
 
   consensus_data = get_blockchain_peers_consensus_data(subnet_nodes_data, scoring_protocol)
 
@@ -280,3 +287,6 @@ def get_next_epoch_start_block(
 ) -> int:
   """Returns next start block for next epoch"""
   return epochs_length + (block - (block % epochs_length))
+
+def safe_div(n, d):
+  return n / d if d else 0
