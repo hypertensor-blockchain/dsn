@@ -5,11 +5,13 @@ from __future__ import annotations
 
 import math
 from functools import partial
+import re
 from typing import Dict, List, Optional, Sequence, Union
 
 from hivemind.dht import DHT, DHTNode, DHTValue
 from hivemind.p2p import PeerID
 from hivemind.utils import DHTExpiration, MPFuture, get_dht_time, get_logger
+from hivemind.dht.crypto import Ed25519SignatureValidator
 
 from subnet.data_structures import (
     CHAIN_DELIMITER,
@@ -21,6 +23,7 @@ from subnet.data_structures import (
     ServerState,
     parse_uid,
 )
+from subnet.utils.validator import extract_key
 
 logger = get_logger(__name__)
 
@@ -31,7 +34,9 @@ def declare_active_modules(
     server_info: ServerInfo,
     expiration_time: DHTExpiration,
     wait: bool = True,
+    record_validator: Optional[Ed25519SignatureValidator] = None,
 ) -> Union[Dict[ModuleUID, bool], MPFuture[Dict[ModuleUID, bool]]]:
+    print("declare_active_modules server_info", server_info)
     """
     Declare that your node serves the specified modules; update timestamps if declared previously
 
@@ -49,7 +54,12 @@ def declare_active_modules(
         assert isinstance(uid, ModuleUID) and UID_DELIMITER in uid and CHAIN_DELIMITER not in uid
 
     return dht.run_coroutine(
-        partial(_declare_active_modules, uids=uids, server_info=server_info, expiration_time=expiration_time),
+        partial(_declare_active_modules, 
+            uids=uids, 
+            server_info=server_info, 
+            expiration_time=expiration_time, 
+            record_validator=record_validator
+        ),
         return_future=not wait,
     )
 
@@ -60,11 +70,14 @@ async def _declare_active_modules(
     uids: List[ModuleUID],
     server_info: ServerInfo,
     expiration_time: DHTExpiration,
+    record_validator: Optional[Ed25519SignatureValidator] = None,
 ) -> Dict[ModuleUID, bool]:
     num_workers = len(uids) if dht.num_workers is None else min(len(uids), dht.num_workers)
+    subkeys = [dht.peer_id.to_base58()] * len(uids) if record_validator is None else [dht.peer_id.to_base58().encode() + record_validator.local_public_key] * len(uids)
+    # print("subkeys", subkeys)
     return await node.store_many(
         keys=uids,
-        subkeys=[dht.peer_id.to_base58()] * len(uids),
+        subkeys=subkeys,
         values=[server_info.to_tuple()] * len(uids),
         expiration_time=expiration_time,
         num_workers=num_workers,
@@ -118,6 +131,9 @@ async def _get_remote_module_infos(
 
         for peer_id, server_info in metadata.value.items():
             try:
+                """We expect the subkey to be owned"""
+                peer_id = extract_key(peer_id)
+
                 peer_id = PeerID.from_base58(peer_id)
                 server_info = ServerInfo.from_tuple(server_info.value)
 

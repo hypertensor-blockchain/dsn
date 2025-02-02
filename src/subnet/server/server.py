@@ -27,6 +27,8 @@ from hivemind.utils.logging import get_logger
 from hivemind.proto import crypto_pb2
 from hivemind.utils.crypto import Ed25519PrivateKey
 from hivemind.utils.auth import POSAuthorizer
+from hivemind.dht.crypto import Ed25519SignatureValidator
+
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
 from transformers import PretrainedConfig
@@ -163,6 +165,8 @@ class Server:
             reachable_via_relay = is_reachable is False  # if can't check reachability (returns None), run a full peer
             logger.info(f"This server is accessible {'via relays' if reachable_via_relay else 'directly'}")
 
+        self.record_validator = Ed25519SignatureValidator(private_key)
+        # self.record_validator = None
         self.dht = DHT(
             initial_peers=initial_peers,
             start=True,
@@ -170,6 +174,7 @@ class Server:
             use_relay=use_relay,
             use_auto_relay=use_auto_relay,
             client_mode=reachable_via_relay,
+            record_validators=() if self.record_validator is None else [self.record_validator],
             **dict(kwargs, authorizer=POSAuthorizer(private_key))
             # **kwargs,
         )
@@ -392,6 +397,7 @@ class Server:
                 quant_type=self.quant_type,
                 tensor_parallel_devices=self.tensor_parallel_devices,
                 should_validate_reachability=self.should_validate_reachability,
+                record_validator=self.record_validator,
                 start=True,
             )
             try:
@@ -440,6 +446,7 @@ class Server:
         time.sleep(random.random() * 2 * self.mean_block_selection_delay)
 
         module_infos = get_remote_module_infos(self.dht, self.module_uids, latest=True)
+        print("_choose_blocks module_infos", module_infos)
         return block_selection.choose_best_blocks(self.num_blocks, module_infos)
 
     def _should_choose_other_blocks(self) -> bool:
@@ -492,8 +499,10 @@ class ModuleContainer(threading.Thread):
         quant_type: QuantType,
         tensor_parallel_devices: Sequence[torch.device],
         should_validate_reachability: bool,
+        record_validator: Optional[Ed25519SignatureValidator] = None,
         **kwargs,
     ) -> ModuleContainer:
+        print("ModuleContainer record_validator", record_validator)
         module_uids = [f"{dht_prefix}{UID_DELIMITER}{block_index}" for block_index in block_indices]
         memory_cache = MemoryCache(attn_cache_bytes, max_alloc_timeout)
 
@@ -507,6 +516,7 @@ class ModuleContainer(threading.Thread):
             memory_cache=memory_cache,
             update_period=update_period,
             expiration=expiration,
+            record_validator=record_validator,
             daemon=True,
         )
         dht_announcer.start()
@@ -719,6 +729,7 @@ class ModuleAnnouncerThread(threading.Thread):
         update_period: float,
         expiration: float,
         max_pinged: int = 5,
+        record_validator: Optional[Ed25519SignatureValidator] = None,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -746,6 +757,8 @@ class ModuleAnnouncerThread(threading.Thread):
             for i in range(self.server_info.start_block + 1, self.server_info.end_block + 1)
         ]
         self.ping_aggregator = PingAggregator(self.dht)
+        self.record_validator = record_validator
+        print("ModuleAnnouncerThread record_validator", self.record_validator)
 
     def run(self) -> None:
         while True:
@@ -765,6 +778,7 @@ class ModuleAnnouncerThread(threading.Thread):
                 self.module_uids,
                 self.server_info,
                 expiration_time=get_dht_time() + self.expiration,
+                record_validator=self.record_validator,
             )
             if self.server_info.state == ServerState.OFFLINE:
                 break

@@ -281,6 +281,95 @@ class InferenceSession:
         assert not self._closed and not self._server_sessions
         return self
 
+    def timed_step(
+        self,
+        inputs: torch.Tensor,
+        prompts: Optional[torch.Tensor] = None,
+        hypo_ids: Optional[torch.Tensor] = None,
+        max_retries: Optional[int] = None,
+    ) -> Tuple[int, torch.Tensor]:
+        assert not self._closed
+        if torch.is_grad_enabled():
+            logger.warning("Running inference session with grad enabled. Gradients will *not* be propagated correctly.")
+
+        if prompts is None or is_dummy(prompts):
+            prompts = DUMMY
+        else:
+            assert prompts.ndim == 4, "deep prompts should have shape [num_blocks, batch_size, prefix_len, hid_size]"
+            assert prompts.shape[0] == self.num_blocks
+            assert prompts.shape[1] in (inputs.shape[0], 1)
+            assert prompts.shape[2] <= inputs.shape[1]
+            assert prompts.shape[3] == inputs.shape[2]
+
+        if hypo_ids is None or is_dummy(hypo_ids):
+            hypo_ids = DUMMY_INT64
+        else:
+            assert len(hypo_ids) == len(inputs)
+            assert hypo_ids.dtype == torch.int64
+
+        inputs_device = inputs.device
+        inputs_dtype = inputs.dtype
+        inputs = inputs.cpu()
+        prompts = prompts.cpu()
+        hypo_ids = hypo_ids.cpu()
+        step_id = str(uuid.uuid4())
+
+        n_input_tokens = inputs.shape[1]
+        if self._position + n_input_tokens > self._max_length:
+            raise ValueError(
+                f"Maximum length exceeded: prefix {self._position} + current {n_input_tokens} exceeds pre-allocated maximum {self._max_length}"
+            )
+
+        server_idx = 0
+        block_idx = 0
+        total_elapsed_time = 0
+        while block_idx < self.num_blocks:
+            for attempt_no in itertools.count():
+                logger.debug(f"Inference: block {block_idx}, attempt {attempt_no}")
+                server_session = None
+                try:
+                    if not self._server_sessions or attempt_no >= 1:
+                        self._update_sequence(server_idx, block_idx, attempt_no)
+
+                    server_session = self._server_sessions[server_idx]
+
+                    assert server_session.position == self.position, f"{server_session.position} and {self.position}"
+
+                    start_time = time.perf_counter()
+
+                    inputs = server_session.step(
+                        inputs,
+                        prompts[server_session.span.start : server_session.span.end],
+                        hypo_ids,
+                        step_id=step_id,
+                    )
+
+                    elapsed_time = time.perf_counter() - start_time  # End timing
+                    total_elapsed_time += elapsed_time
+
+                    server_idx += 1
+                    block_idx = server_session.span.end
+                    self._sequence_manager.on_request_success(server_session.span.peer_id)
+                    break
+                except Exception as e:
+                    self._sequence_manager.on_request_failure(
+                        server_session.span.peer_id if server_session is not None else None
+                    )
+                    if attempt_no + 1 == self._sequence_manager.config.max_retries or attempt_no + 1 >= max_retries:
+                        raise
+                    delay = self._sequence_manager.get_retry_delay(attempt_no)
+                    logger.warning(
+                        f"Caught exception when running inference via {server_session.span if server_session is not None else None} "
+                        f"(retry in {delay:.0f} sec): {repr(e)}"
+                    )
+                    maybe_log_traceback(e)
+                    time.sleep(delay)
+
+        self._position += n_input_tokens
+        outputs = inputs[:, -n_input_tokens:]
+        outputs = outputs.to(device=inputs_device, dtype=inputs_dtype)
+        return total_elapsed_time, outputs
+
     def step(
         self,
         inputs: torch.Tensor,
@@ -348,7 +437,7 @@ class InferenceSession:
                     self._sequence_manager.on_request_failure(
                         server_session.span.peer_id if server_session is not None else None
                     )
-                    if attempt_no + 1 == self._sequence_manager.config.max_retries or attempt_no + 1 == max_retries:
+                    if attempt_no + 1 == self._sequence_manager.config.max_retries or attempt_no + 1 >= max_retries:
                         raise
                     delay = self._sequence_manager.get_retry_delay(attempt_no)
                     logger.warning(

@@ -15,11 +15,13 @@ from subnet.substrate.chain_data import RewardsData, SubnetNode
 from subnet.substrate.chain_functions import activate_subnet, add_subnet_node, attest, get_block_number, get_epoch_length, get_rewards_submission, get_rewards_validator, get_subnet_data, get_subnet_id_by_path, get_subnet_nodes_included, validate
 from subnet.substrate.config import SubstrateConfigCustom
 from subnet.substrate.consensus import AttestReason
-from subnet.substrate.utils import get_next_epoch_start_block, get_submittable_nodes, safe_div
+from subnet.substrate.utils import get_next_epoch_start_block, get_submittable_nodes
 from hivemind.utils.crypto import Ed25519PrivateKey
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 from hivemind import PeerID
+
+from subnet.utils.math import saturating_div
 
 logger = get_logger(__name__)
 
@@ -1128,8 +1130,8 @@ class Consensus(threading.Thread):
     else:
       intersection = set1.intersection(set2)
       print("should_attest else: ", intersection)
-      logger.info("Matching intersection of %s validator data" % (safe_div(len(intersection), len(set1)) * 100))
-      logger.info("Validator matching intersection of %s my data" % (safe_div(len(intersection), len(set2)) * 100))
+      logger.info("Matching intersection of %s validator data" % (saturating_div(len(intersection), len(set1)) * 100))
+      logger.info("Validator matching intersection of %s my data" % (saturating_div(len(intersection), len(set2)) * 100))
 
     self.previous_epoch_data = set2
 
