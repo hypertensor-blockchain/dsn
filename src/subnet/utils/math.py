@@ -1,6 +1,19 @@
-from typing import Optional
-import numpy as np
-
+def safe_div(numerator, denominator):
+  """
+  Performs safe division. Returns 0 if a division error occurs (e.g., division by zero).
+  
+  Args:
+      numerator (int or float): The numerator for the division.
+      denominator (int or float): The denominator for the division.
+  
+  Returns:
+      float: The result of the division, or 0 if there's an error (e.g., division by zero).
+  """
+  try:
+    return numerator / denominator
+  except ZeroDivisionError:
+    return 0
+    
 def saturating_add(a, b, min_val=0, max_val=None):
   """
   Infallible addition that saturates
@@ -47,54 +60,3 @@ def saturating_div(a, b, min_val=0, max_val=None):
   if result < min_val:
       return min_val
   return result
-
-def iqr(data, q1: Optional[int] = 25, q3: Optional[int] = 75):
-  """
-  Calculates Interquartile Range (IQR) using numpy
-
-  Args:
-    data (list): list of integers.
-    q1 (int): first quartile.
-    q3 (int): third quartile.
-
-  Returns:
-    int: The sum of the two numbers.
-
-  Example:
-    >>> iqr([1, 3, 5, 7, 9, 11, 13, 15, 1000], q1=25, q3=75)
-    8.0
-  """
-
-  Q1 = np.percentile(data, q1)
-  Q3 = np.percentile(data, q3)
-
-  IQR = Q3 - Q1
-
-  return IQR
-
-def remove_outliers_iqr(data, q1: Optional[int] = 25, q3: Optional[int] = 75):
-  """
-  Removes outliers from a numpy array using the interquartile range (IQR) method
-
-  Args:
-    data (list): list of integers.
-    q1 (int): first quartile.
-    q3 (int): third quartile.
-
-  Returns:
-    int: Array from numpy array
-
-  Example:
-    >>> remove_outliers_iqr([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100], q1=25, q3=75)
-    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-  """
-  data = np.array(data)
-
-  Q1 = np.percentile(data, q1)
-  Q3 = np.percentile(data, q3)
-  IQR = Q3 - Q1
-
-  lower_bound = Q1 - 1.5 * IQR
-  upper_bound = Q3 + 1.5 * IQR
-
-  return data[(data >= lower_bound) & (data <= upper_bound)].tolist()

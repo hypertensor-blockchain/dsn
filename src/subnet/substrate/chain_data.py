@@ -34,6 +34,7 @@ custom_rpc_type_registry = {
         ["peer_id", "Vec<u8>"],
         ["initialized", "u64"],
         ["classification", "SubnetNodeClassification"],
+        # ["delegate_reward_rate": "128"],
         ["a", "Vec<u8>"],
         ["b", "Vec<u8>"],
         ["c", "Vec<u8>"],
@@ -356,6 +357,7 @@ class SubnetNode:
   peer_id: str
   initialized: int
   classification: str
+  # delegate_reward_rate: int
   a: str
   b: str
   c: str
@@ -370,6 +372,7 @@ class SubnetNode:
     data_decoded["peer_id"] = data_decoded["peer_id"]
     data_decoded["initialized"] = data_decoded["initialized"]
     data_decoded["classification"] = data_decoded["classification"]
+    # data_decoded["delegate_reward_rate"] = data_decoded["delegate_reward_rate"]
     data_decoded["a"] = data_decoded["a"]
     data_decoded["b"] = data_decoded["b"]
     data_decoded["c"] = data_decoded["c"]

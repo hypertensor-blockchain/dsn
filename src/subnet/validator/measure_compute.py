@@ -36,6 +36,8 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 
+from subnet.utils.math_utils import remove_outliers_adaptive
+
 load_dotenv(os.path.join(Path.cwd(), '.env'))
 
 RPC = os.getenv('LOCAL_RPC')
@@ -73,73 +75,74 @@ async def compute_peers_rps(
     **dict(kwargs, authorizer=authorizer)
   )
 
-  num_blocks = model_report['model_reports'][0]['num_blocks']
+  num_blocks = model_report['model_report']['num_blocks']
   times = []
 
-  if torch.cuda.is_available():
-      device = "cuda"
-  elif torch.backends.mps.is_available():
-      device = "mps"
-  else:
-      device = "cpu"
-  device = torch.device(device)
+  # if torch.cuda.is_available():
+  #     device = "cuda"
+  # elif torch.backends.mps.is_available():
+  #     device = "mps"
+  # else:
+  #     device = "cpu"
+  # device = torch.device(device)
 
-  for _ in range(0, 1):
-    for server in model_report['model_reports'][0]["server_rows"]:
-      start_block = server["span"].start
-      end_block = server["span"].end
-      peer_id = server["peer_id"]
-      config.allowed_servers = [peer_id]
+  # for _ in range(0, 1):
+  #   for server in model_report['model_report']["server_rows"]:
+  #     start_block = server["span"].start
+  #     end_block = server["span"].end
+  #     peer_id = server["peer_id"]
+  #     config.allowed_servers = [peer_id]
 
-      blocks = RemoteSequential(
-        config, 
-        dht=dht, 
-        start_block=start_block,
-        end_block=end_block,
-        subnet_id=subnet_id,
-        identity_path=identity_path,
-        rpc=rpc_url
-      )
+  #     blocks = RemoteSequential(
+  #       config, 
+  #       dht=dht, 
+  #       start_block=start_block,
+  #       end_block=end_block,
+  #       subnet_id=subnet_id,
+  #       identity_path=identity_path,
+  #       rpc=rpc_url
+  #     )
 
-      blocks_served_ratio = (end_block - start_block) / num_blocks
-      n_steps = 24
-      n_steps = max(n_steps, int(n_steps / blocks_served_ratio))
-      scaling_factor1 = math.pow(blocks_served_ratio, 1-math.sqrt(blocks_served_ratio))
-      scaling_factorq = math.sqrt(blocks_served_ratio)
-      scaling_factor = (blocks_served_ratio / scaling_factor1)
+  #     blocks_served_ratio = (end_block - start_block) / num_blocks
+  #     n_steps = 24
+  #     n_steps = max(n_steps, int(n_steps / blocks_served_ratio))
+  #     scaling_factor1 = math.pow(blocks_served_ratio, 1-math.sqrt(blocks_served_ratio))
+  #     scaling_factorq = math.sqrt(blocks_served_ratio)
+  #     scaling_factor = (blocks_served_ratio / scaling_factor1)
 
-      max_length = max(n_steps, max_length)  
+  #     max_length = max(n_steps, max_length)  
 
-      warmup_steps = 5
-      n_tokens = 1
-      rps_data = await measure_inference_steps(
-        blocks, 
-        device,
-        peer_id,
-        start_block,
-        end_block,
-        blocks_served_ratio,
-        scaling_factor,
-        max_length,
-        n_steps,
-        warmup_steps,
-        n_tokens,
-        config
-      )
+  #     warmup_steps = 5
+  #     n_tokens = 1
+  #     rps_data = await measure_inference_steps(
+  #       blocks, 
+  #       device,
+  #       peer_id,
+  #       start_block,
+  #       end_block,
+  #       blocks_served_ratio,
+  #       scaling_factor,
+  #       max_length,
+  #       n_steps,
+  #       warmup_steps,
+  #       n_tokens,
+  #       config
+  #     )
 
-      times.append(rps_data)
+  #     times.append(rps_data)
 
-      gc.collect()
-      time.sleep(6)
+  #     gc.collect()
+  #     time.sleep(6)
 
-  pprint.pprint(times)
+  # pprint.pprint(times)
 
   # key = b"key"
   # subkey = b"protected_subkey" + record_validator.local_public_key
 
+  # times = [{'peer_id': '12D3KooWHRgVBAYr4w56YauwnrgGG2ufF7D2LcMTrfKowm4TmneK', 'start': 0, 'end': 24, 'elapsed': 1.4247023710049689, 'device_rps': 14.772006744959576, 'blocks_served_ratio': 0.75, 'steps': 32}, {'peer_id': '12D3KooWMRSF23cFaFPTM9YTz712BSntSY5WmA88Db12E9NqtT8S', 'start': 0, 'end': 32, 'elapsed': 1.4424327049928252, 'device_rps': 13.172191627542519, 'blocks_served_ratio': 1.0, 'steps': 24}]
   # expiration_time = get_dht_time()+10
   # dht.run_coroutine(
-  #   partial(_store_rps, key=key, subkey=subkey, value="times", expiration_time=expiration_time),
+  #   partial(_store_rps, key=key, subkey=subkey, value=times, expiration_time=expiration_time),
   #   return_future=False,
   # )
 
@@ -153,18 +156,48 @@ async def compute_peers_rps(
   #   return_future=False,
   # )
 
-  # for v in rps_get[key]:
-  #   try:
-  #     if isinstance(v, dict):
-  #       print("rps_get k", v.keys())
-  #       print("rps_get v", v.values())
-  #       keys = list(v.keys())
-  #       for key in keys:
-  #         peer_id = extract_peer_id(record_validator, key)
-  #         print("rps_get peer_id", peer_id)
-  #   except Exception as e:
-  #     print(e)
+  # first_key = next(iter(rps_get[key].value))
+  # print("first_key", first_key)
 
+  # inner_value_with_expiration = rps_get[key].value[next(iter(rps_get[key].value))]
+  # print("inner_value_with_expiration", inner_value_with_expiration)
+
+  # inner_dict = rps_get[key].value
+
+  # # Iterate over the protected_subkey and its values
+  # chain_peers = [
+  #   { "peer_id": "12D3KooWHRgVBAYr4w56YauwnrgGG2ufF7D2LcMTrfKowm4TmneK", "device_rps_list": [] },
+  #   { "peer_id": "12D3KooWMRSF23cFaFPTM9YTz712BSntSY5WmA88Db12E9NqtT8S", "device_rps_list": [] },
+  # ]
+  # for peers in chain_peers:
+  #   for subkey, values in inner_dict.items():
+  #       print("subkey", subkey)
+  #       data_entry_peer_id = extract_peer_id(record_validator, subkey)
+  #       print("data_entry_peer_id", data_entry_peer_id)
+  #       exists = any(row["peer_id"] == data_entry_peer_id for row in model_report['model_report']["server_rows"])
+  #       print("exists", exists)
+  #       if not exists:
+  #         continue
+  #       print("values.value", values.value)
+
+  #       for value in values.value:
+  #         if peers["peer_id"] == value['peer_id']:
+  #           peers["device_rps_list"].append(value['device_rps'])
+
+  # print("chain_peers", chain_peers)
+
+  # for peers in chain_peers:
+  #   device_rps_list = peers["device_rps_list"]
+  #   print("device_rps_list", device_rps_list)
+
+  #   filtered_rps_list = remove_outliers_adaptive(device_rps_list)
+  #   print("filtered_rps_list", filtered_rps_list)
+
+  #   rps = np.mean(filtered_rps_list)
+  #   peers["rps"] = rps
+
+
+  # print("chain_peers", chain_peers)
 
 async def _store_rps(
   dht: DHT,

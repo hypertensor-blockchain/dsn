@@ -346,7 +346,7 @@ class Server:
                 cache_dir=self.cache_dir,
                 max_disk_space=self.max_disk_space,
             )
-
+        
         num_blocks = math.floor((total_memory - autograd_memory) / total_memory_per_block)
         assert num_blocks >= 1, "Your GPU does not have enough memory to serve at least one block"
 
@@ -357,7 +357,7 @@ class Server:
         )
 
         logger.info(f"Total memory per block: {(total_memory_per_block)/1e6} MB")
-        logger.info(f"Total subnet memory: {(self.block_config.num_hidden_layers * total_memory_per_block)/1e6} MB")
+        logger.info(f"Total subnet memory:    {(self.block_config.num_hidden_layers * total_memory_per_block)/1e6} MB")
 
         return num_blocks
 
@@ -446,7 +446,7 @@ class Server:
         time.sleep(random.random() * 2 * self.mean_block_selection_delay)
 
         module_infos = get_remote_module_infos(self.dht, self.module_uids, latest=True)
-        print("_choose_blocks module_infos", module_infos)
+
         return block_selection.choose_best_blocks(self.num_blocks, module_infos)
 
     def _should_choose_other_blocks(self) -> bool:
@@ -502,7 +502,6 @@ class ModuleContainer(threading.Thread):
         record_validator: Optional[Ed25519SignatureValidator] = None,
         **kwargs,
     ) -> ModuleContainer:
-        print("ModuleContainer record_validator", record_validator)
         module_uids = [f"{dht_prefix}{UID_DELIMITER}{block_index}" for block_index in block_indices]
         memory_cache = MemoryCache(attn_cache_bytes, max_alloc_timeout)
 
@@ -690,7 +689,7 @@ class ModuleContainer(threading.Thread):
         Please note that terminating container otherwise (e.g. by killing processes) may result in zombie processes.
         If you did already cause a zombie outbreak, your only option is to kill them with -9 (SIGKILL).
         """
-        self.dht_announcer.announce(ServerState.OFFLINE)
+        # self.dht_announcer.announce(ServerState.OFFLINE)
         logger.info(f"Announced that blocks {list(self.module_backends.keys())} are offline")
 
         self.ready.clear()
@@ -758,7 +757,6 @@ class ModuleAnnouncerThread(threading.Thread):
         ]
         self.ping_aggregator = PingAggregator(self.dht)
         self.record_validator = record_validator
-        print("ModuleAnnouncerThread record_validator", self.record_validator)
 
     def run(self) -> None:
         while True:

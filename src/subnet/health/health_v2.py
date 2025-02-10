@@ -36,9 +36,8 @@ def fetch_health_state2(dht: hivemind.DHT) -> dict:
         logger.info(f"Fetching info for models {model}")
 
         block_uids = [f"{model.dht_prefix}{UID_DELIMITER}{i}" for i in range(model.num_blocks)]
-        print("block_uids", block_uids)
+
         module_infos = get_remote_module_infos(dht, block_uids, latest=True)
-        print("module_infos", module_infos)
 
         all_servers = {}
         offset = 0
@@ -46,12 +45,10 @@ def fetch_health_state2(dht: hivemind.DHT) -> dict:
             module_infos[offset : offset + model.num_blocks], min_state=ServerState.OFFLINE
         )
         all_servers.update(model_servers)
-        print("all_servers", all_servers)
 
         offset += model.num_blocks
 
         online_servers = [peer_id for peer_id, span in all_servers.items() if span.state == ServerState.ONLINE]
-        print("online_servers", online_servers)
 
         reach_infos.update(dht.run_coroutine(partial(check_reachability_parallel, online_servers, fetch_info=True)))
         peers_info = {str(peer.peer_id): {"location": extract_peer_ip_info(str(peer.addrs[0])), "multiaddrs": [str(multiaddr) for multiaddr in peer.addrs]} for peer in dht.run_coroutine(get_peers_ips)}
@@ -164,13 +161,13 @@ def fetch_health_state3(dht: hivemind.DHT) -> dict:
 
         module_infos = get_remote_module_infos(dht, block_uids, latest=True)
 
-
         all_servers = {}
         offset = 0
         model_servers = compute_spans(
             module_infos[offset : offset + model.num_blocks], min_state=ServerState.OFFLINE
         )
         all_servers.update(model_servers)
+
 
         offset += model.num_blocks
 
@@ -186,6 +183,9 @@ def fetch_health_state3(dht: hivemind.DHT) -> dict:
 
             # only append online model validators
             if state == "online":
+
+                in_module = peer_in_remote_modules(peer_id, span.start, span.end, model.dht_prefix, module_infos)
+
                 block_healthy[span.start : span.end] = True
                 peer_num_blocks = span.length
                 """
@@ -224,6 +224,7 @@ def fetch_health_state3(dht: hivemind.DHT) -> dict:
                     "peer_id": peer_id,
                     "state": state,
                     "span": span,
+                    "honest": in_module,
                     "span_score": span_score,
                     "using_relay": using_relay,
                 }
@@ -254,6 +255,27 @@ def fetch_health_state3(dht: hivemind.DHT) -> dict:
         )
     except Exception as e:
         logger.error(f"Error fetching peer information: {str(e)}")
+
+def peer_in_remote_modules(peer_id, start, end, dht_prefix, module_infos):
+    # we later ping each block of a users span but do a quick check they're a server in each span and consecutively based on
+    # the records
+    for i in range(start, end):
+        uid = f"{dht_prefix}{UID_DELIMITER}{i}"
+
+        matching_module = next((module for module in module_infos if module.uid == uid), None)
+        
+        # If no RemoteModuleInfo matches the uid, skip the check
+        if not matching_module:
+            print(f"Error: No RemoteModuleInfo found for uid {uid}")
+            continue
+
+        # Validate that the peer_id is in the servers dictionary for this uid
+        if peer_id not in [str(p) for p in matching_module.servers.keys()]:  # Check peer_id in servers
+            print(f"Error: Peer {peer_id} is not listed in servers for {uid}")
+            return False  # Return false if the peer is not found where it should be
+        
+    return True
+
 
 @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(10))
 def get_online_peers(dht: hivemind.DHT) -> List:

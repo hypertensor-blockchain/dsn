@@ -26,31 +26,6 @@ async def check_reachability(peer_id, _, node, *, fetch_info=False, connect_time
                 await node.p2p._client.connect(peer_id, [])
                 await node.p2p._client.disconnect(peer_id)
                 rpc_info = {"ok": True}
-
-        # if fetch_info:  # For Subnet servers
-        #     stub = TransformerConnectionHandler.get_stub(node.p2p, peer_id)
-        #     response = await stub.rpc_info(hivemind.proto.runtime_pb2.ExpertUID())
-        #     rpc_info = hivemind.MSGPackSerializer.loads(response.serialized_info)
-        #     rpc_info["ok"] = True
-        # else:  # For DHT-only bootstrap peers
-        #     print("For DHT-only bootstrap peers")
-        #     await node.p2p._client.connect(peer_id, [])
-        #     await node.p2p._client.disconnect(peer_id)
-        #     rpc_info = {"ok": True}
-
-        # with timeout(connect_timeout):
-        #     print("with timeout")
-        #     if fetch_info:  # For Subnet servers
-        #         print("For Subnet servers")
-        #         stub = TransformerConnectionHandler.get_stub(node.p2p, peer_id)
-        #         response = await stub.rpc_info(hivemind.proto.runtime_pb2.ExpertUID())
-        #         rpc_info = hivemind.MSGPackSerializer.loads(response.serialized_info)
-        #         rpc_info["ok"] = True
-        #     else:  # For DHT-only bootstrap peers
-        #         print("For DHT-only bootstrap peers")
-        #         await node.p2p._client.connect(peer_id, [])
-        #         await node.p2p._client.disconnect(peer_id)
-        #         rpc_info = {"ok": True}
     except Exception as e:
         # Actual connection error
         if not isinstance(e, asyncio.TimeoutError):

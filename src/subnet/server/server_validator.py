@@ -369,6 +369,9 @@ class Server:
             f"If you want to leave some free GPU memory, please specify a lesser --num_blocks manually"
         )
 
+        logger.info(f"Total memory per block: {(total_memory_per_block)/1e6} MB")
+        logger.info(f"Total subnet memory:    {(self.block_config.num_hidden_layers * total_memory_per_block)/1e6} MB")
+
         return num_blocks
 
     def run(self):
