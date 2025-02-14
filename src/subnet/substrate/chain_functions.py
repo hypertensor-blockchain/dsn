@@ -1160,4 +1160,38 @@ def get_max_subnet_registration_blocks(substrate: SubstrateInterface):
 
 
 
+# EVENTS
 
+def get_reward_result_event(
+  substrate: SubstrateInterface,
+  target_subnet_id: int,
+  epoch: int
+):
+  """
+  Function to return all account_ids and subnet_node_ids from the substrate Hypertensor Blockchain
+
+  :param SubstrateInterface: substrate interface from blockchain url
+  :returns: subnet_nodes_data
+  """
+
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
+  def make_event_query():
+    try:
+      epoch_length = get_epoch_length(substrate)
+      epoch_length = int(str(epoch_length))
+      block_number = epoch_length * epoch
+      block_hash = substrate.get_block_hash(block_number=block_number)
+      with substrate as _substrate:
+        data = None
+        events = _substrate.get_events(block_hash=block_hash)
+        for event in events:
+          if event['event']['module_id'] == "Network" and event['event']['event_id'] == "RewardResult":
+            subnet_id, attestation_percentage = event['event']['attributes']
+            if subnet_id == target_subnet_id:
+              data = subnet_id, attestation_percentage
+              break
+        return data
+    except SubstrateRequestException as e:
+      print("Failed to get rpc request: {}".format(e))
+
+  return make_event_query()

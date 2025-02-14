@@ -24,7 +24,6 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 from subnet.client.remote_sequential import RemoteSequential
 from subnet.constants import TEMP_INITIAL_PEERS_LOCATION
 from subnet.server.throughput import synchronize
-# from subnet.substrate.utils import get_blockchain_included
 from subnet.substrate.chain_data import SubnetNode
 from subnet.substrate.chain_functions import get_epoch_length
 from subnet.utils.auto_config import AutoDistributedConfig

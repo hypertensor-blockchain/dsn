@@ -340,17 +340,7 @@ def get_submittable_nodes(substrate: SubstrateInterface, subnet_id: int) -> List
 
   return subnet_nodes
 
-def get_blochchain_model_peers_submittable(substrate: SubstrateInterface, subnet_id: int) -> Dict:
-  result = get_subnet_nodes_submittable(
-    substrate,
-    subnet_id
-  )
-
-  subnet_nodes_data = SubnetNode.list_from_vec_u8(result["result"])
-
-  return subnet_nodes_data
-
-def get_blockchain_included(substrate: SubstrateInterface, subnet_id: int) -> List:
+def get_included_nodes(substrate: SubstrateInterface, subnet_id: int) -> List:
   result = get_subnet_nodes_included(substrate, subnet_id)
 
   subnet_nodes_data = SubnetNode.list_from_vec_u8(result["result"])

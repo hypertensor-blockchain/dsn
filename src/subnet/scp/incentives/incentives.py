@@ -27,7 +27,6 @@ from subnet.health.config import *
 from subnet.health.health_v2 import fetch_health_state3
 
 from subnet.substrate.config import SubstrateConfigCustom
-# from subnet.substrate.utils import get_blockchain_included
 from subnet.substrate.chain_functions import get_epoch_length
 from subnet.utils.math_utils import remove_outliers_adaptive, remove_outliers_iqr
 

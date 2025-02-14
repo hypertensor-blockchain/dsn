@@ -18,12 +18,15 @@ class TestValidatorAttestation(unittest.TestCase):
   
   def test_exact_match(self):
     """Test when validator data and my data match exactly"""
-    validator_data = [ValidatorEntry("123", 1), ValidatorEntry("456", 2)]
-    my_data = [{"peer_id": "123", "score": 1}, {"peer_id": "456", "score": 2}]
+    validator_data = [ValidatorEntry("123", 1), ValidatorEntry("456", 1)]
+    my_data = [{"peer_id": "123", "score": 1}, {"peer_id": "456", "score": 1}]
 
     self.assertTrue(self.attestation.should_attest(validator_data, my_data, 1))
 
   def test_no_data_and_broken_subnet(self):
+    """
+    python src/subnet/substrate/tests/test_consensus.py TestValidatorAttestation.test_no_data_and_broken_subnet
+    """
     """Test when both validator and my data are empty"""
     validator_data = []
     my_data = []
@@ -31,6 +34,9 @@ class TestValidatorAttestation(unittest.TestCase):
     self.assertTrue(self.attestation.should_attest(validator_data, my_data, 1))
 
   def test_validator_incorrect_data(self):
+    """
+    python src/subnet/substrate/tests/test_consensus.py TestValidatorAttestation.test_validator_incorrect_data
+    """
     """Test when validator submits incorrect data"""
     validator_data = [ValidatorEntry("123", 1)]
     my_data = [{"peer_id": "123", "score": 2}]  # Different score
@@ -77,6 +83,9 @@ class TestValidatorAttestation(unittest.TestCase):
     self.assertTrue(self.attestation.should_attest(validator_data, my_data, 1))
 
   def test_first_epoch_uses_previous_validator_data(self):
+    """
+    python src/subnet/substrate/tests/test_consensus.py TestValidatorAttestation.test_first_epoch_uses_previous_validator_data
+    """
     """Test first epoch where previous data is checked from validator submission"""
     validator_data = [ValidatorEntry("123", 1)]
     my_data = []
@@ -104,17 +113,37 @@ class TestValidatorAttestation(unittest.TestCase):
     my_data = [{"peer_id": "123", "score": 1}]
 
     # Last epoch had the node, meaning the validator was honest
+    self.attestation.previous_epoch_data = {frozenset({"peer_id": "456", "score": 1}.items())}
+
+    self.assertTrue(self.attestation.should_attest(validator_data, my_data, 2))
+
+  def test_validator_incorrect_but_node_leaves_after_submission(self):
+    """Node leaves but validator submitted validator not in previous epochs data"""
+    validator_data = [ValidatorEntry("123", 1), ValidatorEntry("456", 1)]
+    my_data = [{"peer_id": "456", "score": 1}]
+
+    # Last epoch had the node, meaning the validator was honest
+    self.attestation.previous_epoch_data = {frozenset({"peer_id": "456", "score": 1}.items())}
+
+    self.assertFalse(self.attestation.should_attest(validator_data, my_data, 2))
+
+  def test_previous_epoch_check_for_validator_honesty(self):
+    """Test when previous epoch data needs to be checked to verify validator honesty"""
+    validator_data = [ValidatorEntry("123", 1), ValidatorEntry("456", 1)]
+    my_data = [{"peer_id": "456", "score": 1}]  # Different node available
+
+    # Previous epoch had "123" meaning validator was honest
     self.attestation.previous_epoch_data = {frozenset({"peer_id": "123", "score": 1}.items())}
 
     self.assertTrue(self.attestation.should_attest(validator_data, my_data, 2))
 
-  def test_previous_epoch_check_for_validator_honesty(self):
-    """Test when previous epoch data needs to be checked to verify validator honesty"""
-    validator_data = [ValidatorEntry("123", 1), ValidatorEntry("456", 2)]
-    my_data = [{"peer_id": "456", "score": 2}]  # Different node available
+  def test_validator_correct_but_node_leaves_before_submission_returns_after(self):
+    """Test when a node leaves before validator submits correctly and returns after, but before attestors attest"""
+    validator_data = [ValidatorEntry("123", 1)]
+    my_data = [{"peer_id": "123", "score": 1}, {"peer_id": "456", "score": 1}]
 
-    # Previous epoch had "123" meaning validator was honest
-    self.attestation.previous_epoch_data = {frozenset({"peer_id": "123", "score": 1}.items())}
+    # Last epoch had the node, meaning the validator was honest
+    self.attestation.previous_epoch_data = {frozenset({"peer_id": "123", "score": 1}.items()), frozenset({"peer_id": "456", "score": 1}.items())}
 
     self.assertTrue(self.attestation.should_attest(validator_data, my_data, 2))
 
@@ -136,18 +165,17 @@ class AttestationSystem:
     set1 = set(frozenset(asdict(d).items()) for d in validator_data)
     set2 = set(frozenset(d.items()) for d in my_data)
 
-    print("set1: ", set1)
-    print("set2: ", set2)
-
     success = set1 == set2
-    print("success: ", success)
 
     if not success and self.previous_epoch_data is not None:
+      print("if not success and self.previous_epoch_data is not None")
       dif = set1.symmetric_difference(set2)
       success = dif.issubset(self.previous_epoch_data)
     elif not success and self.previous_epoch_data is None:
+      print("elif not success and self.previous_epoch_data is None")
       previous_epoch_validator_data = self._get_validator_consensus_submission(epoch - 1)
       if previous_epoch_validator_data is not None:
+        print("if previous_epoch_validator_data is not None")
         previous_epoch_data_onchain = set(frozenset(asdict(d).items()) for d in previous_epoch_validator_data)
         dif = set1.symmetric_difference(set2)
         success = dif.issubset(previous_epoch_data_onchain)
