@@ -14,8 +14,16 @@ from subnet.substrate.utils import get_consensus_data, get_next_epoch_start_bloc
 from hivemind.utils import get_logger
 
 from subnet.utils.math import saturating_div, saturating_sub
+import logging
 
 logger = get_logger(__name__)
+
+logging.basicConfig(
+  filename="error.log",  # File to store logs
+  level=logging.INFO,  # Log only errors and critical messages
+  format=f"%(asctime)s - %(levelname)s - %(message)s"
+)
+
 
 MAX_ATTEST_CHECKS = 3
 
@@ -229,6 +237,13 @@ class Consensus(threading.Thread):
             break
       except Exception as e:
         logger.error("Consensus Error: %s" % e, exc_info=True)
+        logging.basicConfig(
+          filename="error.log",  # File to store logs
+          level=logging.ERROR,  # Log only errors and critical messages
+          format="%(asctime)s - %(levelname)s - %(message)s"
+        )
+
+
 
   def validate(self) -> bool:
     """
@@ -267,6 +282,15 @@ class Consensus(threading.Thread):
     logger.info("Checking if we should attest the validators submission")
     logger.info("Generating consensus data")
     consensus_data = self._get_consensus_data() # should always return `peers` key
+
+    # if not in validator data, check if we're still Submittable
+    in_validator_data = True
+    if not in_validator_data:
+      is_submittable = self.is_submittable()
+      if not is_submittable:
+        logger.warning("We are not Submittable, shutting down consensus class")
+        self.shutdown()
+    
     should_attest = self.should_attest(validator_consensus_data, consensus_data["peers"], epoch)
     logger.info("Should attest is: %s", should_attest)
 
@@ -281,6 +305,21 @@ class Consensus(threading.Thread):
       logger.info("Validators data is not valid, skipping attestation.")
       return False, AttestReason.SHOULD_NOT_ATTEST
   
+  def is_submittable(self) -> bool:
+    submittable_nodes = get_submittable_nodes(
+      self.substrate_config.interface,
+      self.subnet_id,
+    )
+
+    _is = False
+    #  wait until we are submittable
+    for node_set in submittable_nodes:
+      if node_set.account_id == self.account_id:
+        _is = True
+        break
+
+    return _is
+
   def get_rps(self):
     ...
     
@@ -524,6 +563,12 @@ class Consensus(threading.Thread):
 
     # update previous epoch data
     self.previous_epoch_data = set2
+
+    logging.basicConfig(
+      filename="error.log",  # File to store logs
+      level=logging.INFO,  # Log only errors and critical messages
+      format=f"%(asctime)s - {"ATTEST"} - %(levelname)s - %(message)s"
+    )
 
     return success
 
