@@ -878,6 +878,29 @@ def add_to_delegate_stake(
 
   return submit_extrinsic()
 
+def get_subnet_node_id(
+  substrate: SubstrateInterface,
+  subnet_id: int,
+  hotkey: str,
+) -> ExtrinsicReceipt:
+  """
+  Add subnet validator as subnet subnet_node to blockchain storage
+
+  :param substrate: interface to blockchain
+  :param keypair: keypair of extrinsic caller. Must be a subnet_node in the subnet
+  """
+
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
+  def make_query():
+    try:
+      with substrate as _substrate:
+        result = _substrate.query('Network', 'HotkeySubnetNodeId', [subnet_id, hotkey])
+        return result.value['data']['free']
+    except SubstrateRequestException as e:
+      print("Failed to get rpc request: {}".format(e))
+
+  return make_query()
+
 def get_balance(
   substrate: SubstrateInterface,
   address: str

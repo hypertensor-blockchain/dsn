@@ -11,7 +11,7 @@ from hypermind import PeerID
 
 from subnet.scp.incentives.incentives import IncentivesProtocol
 from subnet.substrate.chain_data import RewardsData
-from subnet.substrate.chain_functions import activate_subnet, attest, get_block_number, get_epoch_length, get_reward_result_event, get_subnet_data, get_subnet_id_by_path, get_rewards_submission, get_rewards_validator, validate
+from subnet.substrate.chain_functions import activate_subnet, attest, get_block_number, get_epoch_length, get_reward_result_event, get_subnet_data, get_subnet_id_by_path, get_rewards_submission, get_rewards_validator, get_subnet_node_id, validate
 from subnet.substrate.config import BLOCK_SECS, SubstrateConfigCustom
 from subnet.substrate.utils import get_included_nodes, get_consensus_data, get_next_epoch_start_block, get_submittable_nodes
 
@@ -107,6 +107,14 @@ class Consensus(threading.Thread):
 
           time.sleep(BLOCK_SECS)
           continue
+        
+        # initialize subnet node ID once we have the subnet ID
+        if self.subnet_id is not None:
+          self.subnet_node_id = get_subnet_node_id(
+            self.substrate_config.interface,
+            self.subnet_id,
+            self.account_id,
+          )
 
         # get epoch
         block_number = get_block_number(self.substrate_config.interface)
@@ -178,7 +186,7 @@ class Consensus(threading.Thread):
         else:
           logger.info("Validator for epoch %s is %s" % (epoch, validator))
 
-        is_validator = validator == self.account_id
+        is_validator = validator == self.subnet_node_id
         if is_validator:
           logger.info("We're the chosen validator for epoch %s, validating and auto-attesting..." % epoch)
           # check if validated 
@@ -347,7 +355,7 @@ class Consensus(threading.Thread):
     _is = False
     #  wait until we are submittable
     for node_set in submittable_nodes:
-      if node_set.coldkey == self.account_id:
+      if node_set.hotkey == self.account_id:
         _is = True
         break
 
@@ -362,7 +370,7 @@ class Consensus(threading.Thread):
     _is = False
     #  wait until we are submittable
     for node_set in included_nodes:
-      if node_set.coldkey == self.account_id:
+      if node_set.hotkey == self.account_id:
         _is = True
         break
 
@@ -423,7 +431,8 @@ class Consensus(threading.Thread):
   def _has_attested(self, attestations) -> bool:
     """Get and return the consensus data from the current validator"""
     for data in attestations:
-      if data[0] == self.account_id:
+      # data = { subnet_node_id: block_number}
+      if data[0] == self.subnet_node_id:
         return True
     return False
 
@@ -486,7 +495,7 @@ class Consensus(threading.Thread):
     n = 0
     for node_set in submittable_nodes:
       n+=1
-      if node_set.coldkey == self.account_id:
+      if node_set.hotkey == self.account_id:
         submittable = True
         break
     
