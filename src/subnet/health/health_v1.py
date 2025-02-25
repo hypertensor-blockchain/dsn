@@ -5,9 +5,9 @@ from contextlib import suppress
 from dataclasses import asdict
 from functools import partial
 
-import hivemind
+import hypermind
 import numpy as np
-from hivemind.p2p.multiaddr import Multiaddr
+from hypermind.p2p.multiaddr import Multiaddr
 from subnet.data_structures import UID_DELIMITER, ServerState
 from subnet.utils.dht import compute_spans, get_remote_module_infos
 
@@ -16,14 +16,14 @@ from .config import *
 from .data_structures import ModelInfo
 from .p2p_utils import check_reachability_parallel, get_peers_ips, extract_peer_ip_info
 
-logger = hivemind.get_logger(__name__)
+logger = hypermind.get_logger(__name__)
 
 
-def fetch_health_state(dht: hivemind.DHT) -> dict:
+def fetch_health_state(dht: hypermind.DHT) -> dict:
     start_time = time.perf_counter()
     bootstrap_peer_ids = []
     for addr in INITIAL_PEERS:
-        peer_id = hivemind.PeerID.from_base58(Multiaddr(addr)["p2p"])
+        peer_id = hypermind.PeerID.from_base58(Multiaddr(addr)["p2p"])
         if peer_id not in bootstrap_peer_ids:
             bootstrap_peer_ids.append(peer_id)
 

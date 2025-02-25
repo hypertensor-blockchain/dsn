@@ -8,11 +8,11 @@ import uuid
 from typing import AsyncIterator, Dict, List, Optional, Tuple
 
 import torch
-from hivemind import MSGPackSerializer, anext, deserialize_torch_tensor, get_logger, serialize_torch_tensor
-from hivemind.moe.client.remote_expert_worker import RemoteExpertWorker
-from hivemind.p2p import P2P
-from hivemind.proto import runtime_pb2
-from hivemind.utils.tensor_descr import BatchTensorDescriptor
+from hypermind import MSGPackSerializer, anext, deserialize_torch_tensor, get_logger, serialize_torch_tensor
+from hypermind.moe.client.remote_expert_worker import RemoteExpertWorker
+from hypermind.p2p import P2P
+from hypermind.proto import runtime_pb2
+from hypermind.utils.tensor_descr import BatchTensorDescriptor
 
 from subnet.validator.config import ClientConfig
 from subnet.validator.routing import RemoteSequenceManager, maybe_log_traceback

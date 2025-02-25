@@ -16,9 +16,9 @@ from subnet.utils.auto_config import AutoDistributedModelForCausalLMValidator
 
 from transformers import AutoTokenizer
 import torch
-from hivemind.utils.logging import get_logger
-from hivemind import PeerID, DHT
-from hivemind.utils.auth import AuthorizerBase
+from hypermind.utils.logging import get_logger
+from hypermind import PeerID, DHT
+from hypermind.utils.auth import AuthorizerBase
 
 import pprint 
 

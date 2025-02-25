@@ -3,7 +3,7 @@ from subnet.substrate.chain_data import SubnetNode
 from subnet.substrate.chain_functions import get_subnet_nodes_included, get_subnet_nodes_submittable
 from substrateinterface import SubstrateInterface
 from subnet.health.state_updater import ScoringProtocol
-from hivemind.utils import get_logger
+from hypermind.utils import get_logger
 
 logger = get_logger(__name__)
 
@@ -19,11 +19,13 @@ def get_blockchain_peers_consensus_data(
   """Get peers matching blockchain model peers"""
   """If model is broken it can return `None`"""
   peers_data = scoring_protocol.run()
+  print("peers_data", peers_data)
 
   """
   If model is broken then send back `model_state` as broken with a blank `peers` array
   """
   if peers_data == None:
+    logger.info("Peers data is none")
     return {
       "model_state": "broken",
       "peers": []
@@ -81,6 +83,7 @@ def get_blockchain_peers_consensus_data(
   """If peers don't match blockchain peers, return broken"""
 
   if len(initial_blockchain_peers) == 0 or total_blockchain_model_peers_blocks == 0:
+    logger.info("Subnet nodes are zero")
     return {
       "model_state": "broken",
       "peers": []
@@ -115,8 +118,8 @@ def get_blockchain_peers_consensus_data(
 
   """Get scores as a percentage share"""
   for subnet_node in blockchain_peers:
-    score = int(subnet_node['score'] / scores_sum * 1e4)
-    subnet_node['score'] = score
+    score = int(subnet_node['span_score'] / scores_sum * 1e4)
+    subnet_node['span_score'] = score
 
   return {
     "model_state": model_state,
@@ -199,8 +202,8 @@ def get_blockchain_peers_consensus_data(
 
 #   """Get speed data"""
 #   for subnet_node in initial_blockchain_peers:
-#     score = int(subnet_node['score'] / scores_sum * 1e4)
-#     subnet_node['score'] = score
+#     score = int(subnet_node['span_score'] / scores_sum * 1e4)
+#     subnet_node['span_score'] = score
 
 
 #   """Get scores as float"""
@@ -232,8 +235,8 @@ def get_blockchain_peers_consensus_data(
 
 #   """Get scores as a percentage share"""
 #   for subnet_node in blockchain_peers:
-#     score = int(subnet_node['score'] / scores_sum * 1e4)
-#     subnet_node['score'] = score
+#     score = int(subnet_node['span_score'] / scores_sum * 1e4)
+#     subnet_node['span_score'] = score
 
 #   return {
 #     "model_state": model_state,
@@ -296,9 +299,11 @@ def get_consensus_data(
 
   subnet_nodes_data = SubnetNode.list_from_vec_u8(result["result"])
 
-  logger.info("Retrieved subnet nodes: ", subnet_nodes_data)
+  logger.info("Retrieved subnet nodes: %s "  % subnet_nodes_data)
 
   consensus_data = get_blockchain_peers_consensus_data(subnet_nodes_data, scoring_protocol)
+
+  logger.info("Retrieved consensus data: %s "  % consensus_data)
 
   return consensus_data
 
@@ -324,7 +329,7 @@ def get_consensus_data_with_speed(
 
   subnet_nodes_data = SubnetNode.list_from_vec_u8(result["result"])
 
-  logger.info("Retrieved subnet nodes: ", subnet_nodes_data)
+  logger.info("Retrieved subnet nodes: %s "  % subnet_nodes_data)
 
   consensus_data = get_blockchain_peers_consensus_data(subnet_nodes_data, scoring_protocol)
 
@@ -344,6 +349,8 @@ def get_included_nodes(substrate: SubstrateInterface, subnet_id: int) -> List:
   result = get_subnet_nodes_included(substrate, subnet_id)
 
   subnet_nodes_data = SubnetNode.list_from_vec_u8(result["result"])
+
+  print("get_included_nodes", subnet_nodes_data)
 
   return subnet_nodes_data
 

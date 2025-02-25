@@ -10,19 +10,16 @@ import threading
 import time
 from typing import Dict, List, Optional, Sequence, Union
 
-import hivemind
+import hypermind
 import psutil
 import torch
 import torch.mps
-from hivemind import DHT, MAX_DHT_TIME_DISCREPANCY_SECONDS, BatchTensorDescriptor, get_dht_time
-from hivemind.moe.server.layers import add_custom_models_from_file
-from hivemind.moe.server.runtime import Runtime
-from hivemind.proto.runtime_pb2 import CompressionType
-from hivemind.utils.logging import get_logger
-from hivemind.proto import crypto_pb2
-from hivemind.utils.crypto import Ed25519PrivateKey
-from hivemind.utils.auth import AuthorizerBase, POSAuthorizer
-from cryptography.hazmat.primitives.asymmetric import ed25519
+from hypermind import DHT, MAX_DHT_TIME_DISCREPANCY_SECONDS, BatchTensorDescriptor, get_dht_time
+from hypermind.moe.server.layers import add_custom_models_from_file
+from hypermind.moe.server.runtime import Runtime
+from hypermind.proto.runtime_pb2 import CompressionType
+from hypermind.utils.logging import get_logger
+from hypermind.utils.auth import AuthorizerBase
 
 from transformers import PretrainedConfig
 
@@ -45,7 +42,6 @@ from subnet.utils.misc import get_size_in_bytes
 from subnet.utils.ping import PingAggregator
 from subnet.utils.random import sample_up_to
 from subnet.utils.version import get_compatible_model_repo
-from subnet.validator.inference_validator import InferenceValidator
 
 logger = get_logger(__name__)
 
@@ -122,7 +118,7 @@ class Server:
         if custom_module_path is not None:
             add_custom_models_from_file(custom_module_path)
 
-        identity_path = kwargs.get('identity_path', None)
+        self.identity_path = kwargs.get('identity_path', None)
 
         # identity_path is not needed here but we pass it anyway to avoid logging
         self.block_config = AutoDistributedConfig.from_pretrained(
@@ -130,7 +126,7 @@ class Server:
             use_auth_token=token,
             revision=revision,
             subnet_id=subnet_id,
-            identity_path=identity_path,
+            identity_path=self.identity_path,
             rpc=self.substrate.url,
         )
 
@@ -315,7 +311,7 @@ class Server:
             self.run_consensus()
 
     def run_consensus(self):
-        Consensus(self.path, self.authorizer, self.substrate)
+        self.consensus = Consensus(self, self.path, self.dht.peer_id, self.authorizer, self.substrate, self.identity_path)
 
     def _choose_num_blocks(self) -> int:
         assert self.device.type in ("cuda", "mps"), (
@@ -535,6 +531,9 @@ class Server:
             self.reachability_protocol.shutdown()
         self.dht.shutdown()
         self.dht.join()
+
+        if self.consensus is not None and not self.consensus.stop.is_set():
+            self.consensus.shutdown()
 
 
 class ModuleContainer(threading.Thread):
@@ -866,7 +865,7 @@ class ModuleAnnouncerThread(threading.Thread):
         if state == ServerState.OFFLINE:
             self.join()
 
-    def _ping_next_servers(self) -> Dict[hivemind.PeerID, float]:
+    def _ping_next_servers(self) -> Dict[hypermind.PeerID, float]:
         module_infos = get_remote_module_infos(self.dht, self.next_uids, latest=True)
         middle_servers = {peer_id for info in module_infos[:-1] for peer_id in info.servers}
         pinged_servers = set(sample_up_to(middle_servers, self.max_pinged))
@@ -877,7 +876,7 @@ class ModuleAnnouncerThread(threading.Thread):
 
 
 class RuntimeWithDeduplicatedPools(Runtime):
-    """A version of hivemind.moe.server.runtime.Runtime that allows multiple backends to reuse a task pool"""
+    """A version of hypermind.moe.server.runtime.Runtime that allows multiple backends to reuse a task pool"""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

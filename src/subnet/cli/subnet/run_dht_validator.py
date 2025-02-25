@@ -8,18 +8,30 @@ This may be eventually merged to the hypermind upstream.
 """
 
 import argparse
+import os
 import time
 from secrets import token_hex
+from dotenv import load_dotenv
+from pathlib import Path
+
+from cryptography.hazmat.primitives.asymmetric import ed25519
 
 from hypermind.dht import DHT, DHTNode
 from hypermind.utils.logging import get_logger, use_hypermind_log_handler
 from hypermind.utils.networking import log_visible_maddrs
+from hypermind.proto import crypto_pb2
+from hypermind.utils.crypto import Ed25519PrivateKey
+from hypermind.utils.auth import POSAuthorizerLive
 
 from subnet.server.reachability import ReachabilityProtocol
+from subnet.substrate.config import SubstrateConfigCustom
+
+load_dotenv(os.path.join(Path.cwd(), '.env'))
+
+PHRASE = os.getenv('PHRASE')
 
 use_hypermind_log_handler("in_root_logger")
 logger = get_logger(__name__)
-
 
 async def report_status(dht: DHT, node: DHTNode):
     logger.info(
@@ -63,6 +75,7 @@ def main():
     )
     parser.add_argument(
         "--identity_path",
+        type=str,
         help="Path to a private key file. If defined, makes the peer ID deterministic. "
         "If the file does not exist, writes a new private key to this file.",
     )
@@ -80,8 +93,33 @@ def main():
     parser.add_argument(
         "--refresh_period", type=int, default=30, help="Period (in seconds) for fetching the keys from DHT"
     )
+    parser.add_argument("--local", action="store_true", help="Run in local mode, uses LOCAL_RPC")
+    parser.add_argument("--phrase", type=str, help="Seed phrase for local RPC")
+    parser.add_argument("--subnet_id", type=str, required=True, help="Subnet ID you registered your subnet node for. ")
 
     args = parser.parse_args()
+    local = args.local
+    phrase = args.phrase
+
+    if local:
+        rpc = os.getenv('LOCAL_RPC')
+    else:
+        rpc = os.getenv('DEV_RPC')
+    
+    if phrase is not None:
+        substrate = SubstrateConfigCustom(phrase, rpc)
+    else:
+        substrate = SubstrateConfigCustom(PHRASE, rpc)
+
+    identity_path = args.identity_path
+    if identity_path is not None:
+        with open(f"{identity_path}", "rb") as f:
+            data = f.read()
+            key_data = crypto_pb2.PrivateKey.FromString(data).data
+            raw_private_key = ed25519.Ed25519PrivateKey.from_private_bytes(key_data[:32])
+            private_key = Ed25519PrivateKey(private_key=raw_private_key)
+
+        authorizer = POSAuthorizerLive(private_key, int(args.subnet_id), substrate.interface)        
 
     dht = DHT(
         start=True,
@@ -92,6 +130,7 @@ def main():
         identity_path=args.identity_path,
         use_relay=args.use_relay,
         use_auto_relay=args.use_auto_relay,
+        **dict(authorizer=authorizer),
     )
     log_visible_maddrs(dht.get_visible_maddrs(), only_p2p=args.use_ipfs)
 

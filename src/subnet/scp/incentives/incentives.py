@@ -4,23 +4,24 @@ import math
 from typing import Any, Dict, List, Optional
 import torch
 
-import hivemind
-from hivemind.utils.auth import AuthorizerBase
-from hivemind import PeerID
-from hivemind.utils import DHTExpiration, get_dht_time
-from hivemind.dht.routing import DHTKey
-from hivemind.utils.crypto import Ed25519PrivateKey, Ed25519PublicKey
-from hivemind.dht import DHTNode
-from hivemind.dht.crypto import Ed25519SignatureValidator, RecordValidatorBase
-from hivemind.proto import crypto_pb2
-from hivemind.utils.crypto import Ed25519PrivateKey
+import hypermind
+from hypermind.utils.auth import AuthorizerBase
+from hypermind import PeerID
+from hypermind.utils import DHTExpiration, get_dht_time
+from hypermind.dht.routing import DHTKey
+from hypermind.utils.crypto import Ed25519PrivateKey, Ed25519PublicKey
+from hypermind.dht import DHTNode
+from hypermind.dht.crypto import Ed25519SignatureValidator, RecordValidatorBase
+from hypermind.proto import crypto_pb2
+from hypermind.utils.crypto import Ed25519PrivateKey
 
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
 from subnet.client.remote_sequential import RemoteSequential
 from subnet.constants import TEMP_INITIAL_PEERS_LOCATION
 from subnet.server.throughput import synchronize
-from subnet.substrate.chain_data import SubnetNode
+# from subnet.substrate.chain_data import SubnetNode
+from subnet.substrate.utils import get_included_nodes
 from subnet.utils.auto_config import AutoDistributedConfig
 
 from subnet.health.config import *
@@ -30,7 +31,10 @@ from subnet.substrate.config import SubstrateConfigCustom
 from subnet.substrate.chain_functions import get_epoch_length
 from subnet.utils.math_utils import remove_outliers_adaptive, remove_outliers_iqr
 
-logger = hivemind.get_logger(__name__)
+logger = hypermind.get_logger(__name__)
+
+BLOCK_WEIGHT = 0.5
+RPS_WEIGHT = 1 - BLOCK_WEIGHT
 
 class IncentivesProtocol():
     """
@@ -43,6 +47,7 @@ class IncentivesProtocol():
         rpc_url: Optional[str],
         subnet_id: Optional[int],
         substrate: Optional[SubstrateConfigCustom] = None,
+        benchmark_rps: Optional[bool] = False,
         **kwargs
     ):
         super().__init__(**kwargs)
@@ -73,8 +78,9 @@ class IncentivesProtocol():
         self.record_validator = Ed25519SignatureValidator(private_key)
         self.rpc_url = rpc_url
         self.epoch_length = 0 if self.substrate is None else int(str(get_epoch_length(self.substrate.interface)))
+        self.benchmark_rps = benchmark_rps
 
-        self.dht = hivemind.DHT(
+        self.dht = hypermind.DHT(
             initial_peers=initial_peers, 
             client_mode=True, 
             num_workers=32, 
@@ -95,59 +101,68 @@ class IncentivesProtocol():
                 }
             
             state_dict = self.clean_model_report(state_dict)
+            print("state_dict 2: ", state_dict)
 
             """Try to get the speed scores"""
-            try:
-                state_dict = await self.measure_rps(state_dict)
-                # print("state_dict measure_rps", state_dict)
+            if self.benchmark_rps:
+                try:
+                    state_dict = await self.measure_rps(state_dict)
+                    print("state_dict 3: ", state_dict)
 
-                epoch = self.get_epoch()
-                calculated_rps = self.calculate_rps_data(state_dict, epoch)
-                # print("state_dict calculated_rps", calculated_rps)
-            except Exception as e:
-                logger.warning("Incentives Protocol Error: ", e)
-                pass
+                    epoch = self.get_epoch()
+                    self.calculate_rps_data(state_dict, epoch)
+                    # print("state_dict calculated_rps", calculated_rps)
+                except Exception as e:
+                    logger.warning("Incentives Protocol Error: ", e)
+                    pass
+            
+            subnet_node_weights = self.get_scores(state_dict)
+            print("subnet_node_weights", subnet_node_weights)
 
-            return state_dict
+            return subnet_node_weights
         except:
             return None
-        
+
+    def get_health_state(self):
+        state_dict = fetch_health_state3(self.dht)
+        return state_dict
+
     def clean_model_report(self, state_dict) -> List:
         """
         Removes any peer_ids that don't match the blockchains subnet nodes
         """
+        print("clean_model_report")
         # watch for circular import on testing with measure compute
-        # subnet_nodes = get_blockchain_included(self.substrate, self.subnet_id)
-        subnet_nodes = [
-            SubnetNode(
-                account_id="",
-                hotkey="",
-                peer_id="12D3KooWHRgVBAYr4w56YauwnrgGG2ufF7D2LcMTrfKowm4TmneK",
-                initialized=0,
-                classification="0",
-                a="0",
-                b="0",
-                c="0"
-            ),
-            SubnetNode(
-                account_id="",
-                hotkey="",
-                peer_id="12D3KooWMRSF23cFaFPTM9YTz712BSntSY5WmA88Db12E9NqtT8S",
-                initialized=0,
-                classification="0",
-                a="0",
-                b="0",
-                c="0"
-            ),
-        ]
+        subnet_nodes = get_included_nodes(self.substrate.interface, self.subnet_id)
+        print("clean_model_report subnet_nodes", subnet_nodes)
+        # subnet_nodes = [
+        #     SubnetNode(
+        #         account_id="",
+        #         hotkey="",
+        #         peer_id="12D3KooWHRgVBAYr4w56YauwnrgGG2ufF7D2LcMTrfKowm4TmneK",
+        #         initialized=0,
+        #         classification="0",
+        #         a="0",
+        #         b="0",
+        #         c="0"
+        #     ),
+        #     SubnetNode(
+        #         account_id="",
+        #         hotkey="",
+        #         peer_id="12D3KooWMRSF23cFaFPTM9YTz712BSntSY5WmA88Db12E9NqtT8S",
+        #         initialized=0,
+        #         classification="0",
+        #         a="0",
+        #         b="0",
+        #         c="0"
+        #     ),
+        # ]
         subnet_nodes = [node.peer_id for node in subnet_nodes]
+        print("clean_model_report subnet_nodes", subnet_nodes)
         state_dict["model_report"]["server_rows"] = [
             row for row in state_dict["model_report"]["server_rows"] if row["peer_id"] in subnet_nodes
         ]
-        return state_dict
-
-    def get_health_state(self):
-        state_dict = fetch_health_state3(self.dht)
+        print("clean_model_report state_dict", state_dict)
         return state_dict
 
     async def measure_rps(self, state_dict):
@@ -274,7 +289,7 @@ class IncentivesProtocol():
                         time, outputs = sess.timed_step(torch.empty(1, n_tokens, config.hidden_size), max_retries=0)
                         if _ >= warmup_steps:
                             time_steps.append(time)
-                    except hivemind.p2p.p2p_daemon_bindings.utils.P2PHandlerError as e:
+                    except hypermind.p2p.p2p_daemon_bindings.utils.P2PHandlerError as e:
                         logger.warning(f"RPS Exception {e}", exc_info=True)
                         success = False
                         break
@@ -385,22 +400,46 @@ class IncentivesProtocol():
                     server["rps"] = rps
                     break
 
-    def get_score(self, state_dict):
+    def get_scores(self, state_dict):
         """
         Uses the block weight and rps weight to determine each nodes score
         """
+        print("get_scores")
+
+        subnet_node_weights = []
         num_blocks = state_dict['model_report']['num_blocks']
         node_count = len(state_dict["model_report"]["server_rows"])
         num_blocks_sum = num_blocks * node_count
         rps_sum = sum(row.get("rps", 0) for row in state_dict["model_report"]["server_rows"])
+
+        print("get_scores num_blocks    ", num_blocks)
+        print("get_scores node_count    ", node_count)
+        print("get_scores num_blocks_sum", num_blocks_sum)
+        print("get_scores rps_sum       ", rps_sum)
+
         for server in state_dict["model_report"]["server_rows"]:
             peer_id = server["peer_id"]
-            rps = server["rps"]
-            rps_weight = int(rps / rps_sum * 1e4)
+            # rps = server["rps"]
+            # rps_weight = int(rps / rps_sum * 1e4)
             span_weight = server["span"].end - server["span"].start
-            transformer_block_weight = int(span_weight / num_blocks_sum * 1e4)
-            weight = rps_weight * RPS_WEIGHT + transformer_block_weight * BLOCK_WEIGHT
+            # transformer_block_weight = int(span_weight / num_blocks_sum * 1e4)
+            # weight = rps_weight * RPS_WEIGHT + transformer_block_weight * BLOCK_WEIGHT
 
+            dict = {
+            "peer_id": str(peer_id),
+            "score": self.get_span_score(span_weight, num_blocks, num_blocks_sum),
+            }
+            subnet_node_weights.append(dict)
+
+        return subnet_node_weights
+
+    def get_span_score(self, x: int, blocks_per_layer: int, total_blocks: int) -> int:
+        max_share_ratio = float(blocks_per_layer / total_blocks)
+        k = max_share_ratio * 100
+        share = float(x / total_blocks)
+        # @to-do: Include throughput
+        y = int((k * share * share + share) * 1e18)
+        return y
             
     def get_epoch(self) -> int:
         if self.substrate is not None:
@@ -408,7 +447,7 @@ class IncentivesProtocol():
         return 1
 
 async def _store_rps(
-    dht: hivemind.DHT,
+    dht: hypermind.DHT,
     node: DHTNode,
     key: Any,
     subkey: Any,
@@ -424,7 +463,7 @@ async def _store_rps(
     )
 
 async def _get_rps(
-    dht: hivemind.DHT,
+    dht: hypermind.DHT,
     node: DHTNode,
     key: Any,
     expiration_time: Optional[DHTExpiration],

@@ -3,7 +3,7 @@ import time
 
 import pytest
 import torch
-from hivemind import DHT, get_logger
+from hypermind import DHT, get_logger
 
 from subnet import AutoDistributedConfig
 from subnet.client import RemoteSequenceManager, RemoteSequential

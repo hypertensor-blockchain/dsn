@@ -6,9 +6,9 @@ import logging
 
 import configargparse
 import torch
-from hivemind.proto.runtime_pb2 import CompressionType
-from hivemind.utils import limits
-from hivemind.utils.logging import get_logger
+from hypermind.proto.runtime_pb2 import CompressionType
+from hypermind.utils import limits
+from hypermind.utils.logging import get_logger
 from humanfriendly import parse_size
 
 from subnet.constants import DTYPE_MAP, PUBLIC_INITIAL_PEERS

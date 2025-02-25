@@ -15,19 +15,19 @@ import threading
 import time
 from typing import Dict, List, Optional, Sequence, Union
 
-import hivemind
+import hypermind
 import psutil
 import torch
 import torch.mps
-from hivemind import DHT, MAX_DHT_TIME_DISCREPANCY_SECONDS, BatchTensorDescriptor, get_dht_time
-from hivemind.moe.server.layers import add_custom_models_from_file
-from hivemind.moe.server.runtime import Runtime
-from hivemind.proto.runtime_pb2 import CompressionType
-from hivemind.utils.logging import get_logger
-from hivemind.proto import crypto_pb2
-from hivemind.utils.crypto import Ed25519PrivateKey
-from hivemind.utils.auth import POSAuthorizer
-from hivemind.dht.crypto import Ed25519SignatureValidator
+from hypermind import DHT, MAX_DHT_TIME_DISCREPANCY_SECONDS, BatchTensorDescriptor, get_dht_time
+from hypermind.moe.server.layers import add_custom_models_from_file
+from hypermind.moe.server.runtime import Runtime
+from hypermind.proto.runtime_pb2 import CompressionType
+from hypermind.utils.logging import get_logger
+from hypermind.proto import crypto_pb2
+from hypermind.utils.crypto import Ed25519PrivateKey
+from hypermind.utils.auth import POSAuthorizer
+from hypermind.dht.crypto import Ed25519SignatureValidator
 
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
@@ -54,6 +54,7 @@ from subnet.utils.version import get_compatible_model_repo
 
 logger = get_logger(__name__)
 
+logger.debug("DEBUG MESSAGE LOG HERE")
 
 class Server:
     """
@@ -405,6 +406,7 @@ class Server:
 
                 while True:
                     timeout = random.random() * 2 * self.mean_balance_check_period
+                    logger.debug("ayo test here now")
                     if self.stop.wait(timeout):
                         return
 
@@ -525,7 +527,6 @@ class ModuleContainer(threading.Thread):
 
         blocks = {}
         try:
-            logger.info("Loading load_pretrained_block")
             for module_uid, block_index in zip(module_uids, block_indices):
                 block = load_pretrained_block(
                     converted_model_name_or_path,
@@ -802,7 +803,7 @@ class ModuleAnnouncerThread(threading.Thread):
         if state == ServerState.OFFLINE:
             self.join()
 
-    def _ping_next_servers(self) -> Dict[hivemind.PeerID, float]:
+    def _ping_next_servers(self) -> Dict[hypermind.PeerID, float]:
         module_infos = get_remote_module_infos(self.dht, self.next_uids, latest=True)
         middle_servers = {peer_id for info in module_infos[:-1] for peer_id in info.servers}
         pinged_servers = set(sample_up_to(middle_servers, self.max_pinged))
@@ -813,7 +814,7 @@ class ModuleAnnouncerThread(threading.Thread):
 
 
 class RuntimeWithDeduplicatedPools(Runtime):
-    """A version of hivemind.moe.server.runtime.Runtime that allows multiple backends to reuse a task pool"""
+    """A version of hypermind.moe.server.runtime.Runtime that allows multiple backends to reuse a task pool"""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

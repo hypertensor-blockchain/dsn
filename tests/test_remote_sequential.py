@@ -1,8 +1,8 @@
 import pytest
 import torch
 import torch.nn.functional as F
-from hivemind import DHT, BatchTensorDescriptor, get_logger
-from hivemind.proto import runtime_pb2
+from hypermind import DHT, BatchTensorDescriptor, get_logger
+from hypermind.proto import runtime_pb2
 
 from subnet import AutoDistributedConfig
 from subnet.client import RemoteSequenceManager, RemoteSequential
@@ -80,7 +80,7 @@ class DummyCustomSequenceManager(RemoteSequenceManager):
         elif protocol == "rpc_backward":
             metadata["output_compression"] = (runtime_pb2.CompressionType.FLOAT16,)
             # FIXME: Initially, we used CompressionType.BLOCKWISE_8BIT for rpc_backward() here.
-            # This is currently broken since hivemind==1.1.8 is not compatible with bitsandbytes==0.39.1.
+            # This is currently broken since hypermind==1.1.8 is not compatible with bitsandbytes==0.39.1.
             # Please revert to BLOCKWISE_8BIT once this is fixed: https://github.com/learning-at-home/hivemind/issues/572
         return metadata
 

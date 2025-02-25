@@ -7,9 +7,9 @@ from collections import deque
 from typing import List, Optional, Sequence, Tuple
 
 import torch
-from hivemind import MSGPackSerializer
-from hivemind.moe.client.remote_expert_worker import RemoteExpertWorker
-from hivemind.utils.logging import get_logger
+from hypermind import MSGPackSerializer
+from hypermind.moe.client.remote_expert_worker import RemoteExpertWorker
+from hypermind.utils.logging import get_logger
 
 from subnet.validator.remote_forward_backward import run_remote_backward, run_remote_forward
 from subnet.validator.routing import RemoteSequenceManager, maybe_log_traceback

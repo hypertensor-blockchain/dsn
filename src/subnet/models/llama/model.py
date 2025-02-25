@@ -1,9 +1,9 @@
 from typing import Optional
 
-import hivemind
+import hypermind
 import torch
 import torch.nn as nn
-from hivemind.utils.logging import get_logger
+from hypermind.utils.logging import get_logger
 from transformers.modeling_outputs import BaseModelOutputWithPast
 from transformers.models.llama import LlamaForCausalLM, LlamaForSequenceClassification, LlamaModel, LlamaPreTrainedModel
 
@@ -37,7 +37,7 @@ class DistributedLlamaModel(FromPretrainedMixin, PTuneMixin, LlamaModel):
         self, 
         config: DistributedLlamaConfig, 
         *, 
-        dht: Optional[hivemind.DHT] = None, 
+        dht: Optional[hypermind.DHT] = None, 
         subnet_id: Optional[int] = None,
         identity_path: Optional[str] = None,
         rpc: Optional[str] = None
@@ -213,7 +213,7 @@ class DistributedLlamaModelValidator(FromPretrainedMixinValidator, PTuneMixinVal
         self, 
         config: DistributedLlamaConfig, 
         *, 
-        dht: Optional[hivemind.DHT] = None, 
+        dht: Optional[hypermind.DHT] = None, 
         subnet_id: Optional[int] = None,
         identity_path: Optional[str] = None,
         rpc: Optional[str] = None

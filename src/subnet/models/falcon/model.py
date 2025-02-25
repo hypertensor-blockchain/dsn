@@ -1,9 +1,9 @@
 from typing import Optional
 
-import hivemind
+import hypermind
 import torch
 import torch.nn as nn
-from hivemind.utils.logging import get_logger
+from hypermind.utils.logging import get_logger
 from transformers.modeling_outputs import BaseModelOutputWithPastAndCrossAttentions
 from transformers.models.falcon import (
     FalconForCausalLM,
@@ -31,7 +31,7 @@ class DistributedFalconModel(DefaultRevisionMixin, FromPretrainedMixin, PTuneMix
 
     config_class = DistributedFalconConfig
 
-    def __init__(self, config: DistributedFalconConfig, *, dht: Optional[hivemind.DHT] = None):
+    def __init__(self, config: DistributedFalconConfig, *, dht: Optional[hypermind.DHT] = None):
         n_layer, config.num_hidden_layers = config.num_hidden_layers, 0  # Prevent initialization
         super().__init__(config)
         assert len(self.h) == 0

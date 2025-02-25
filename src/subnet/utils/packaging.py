@@ -1,9 +1,9 @@
 from typing import Any, Dict, List, Tuple
 
 import torch
-from hivemind import nested_flatten, nested_pack
+from hypermind import nested_flatten, nested_pack
 
-# TODO: Move functions to hivemind
+# TODO: Move functions to hypermind
 
 
 def _mark_masked_tensor(index: int) -> bytes:

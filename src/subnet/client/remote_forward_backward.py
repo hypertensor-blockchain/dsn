@@ -5,14 +5,14 @@ import asyncio
 from typing import Iterable, List, Optional, Sequence, Tuple
 
 import torch
-from hivemind import nested_compare, nested_flatten, nested_pack, serialize_torch_tensor
-from hivemind.compression.serialization import deserialize_tensor_stream, deserialize_torch_tensor
-from hivemind.p2p import StubBase
-from hivemind.p2p.p2p_daemon_bindings.control import DEFAULT_MAX_MSG_SIZE, MAX_UNARY_PAYLOAD_SIZE
-from hivemind.proto import runtime_pb2
-from hivemind.utils.asyncio import aiter_with_timeout, iter_as_aiter
-from hivemind.utils.streaming import split_for_streaming
-from hivemind.utils.tensor_descr import BatchTensorDescriptor
+from hypermind import nested_compare, nested_flatten, nested_pack, serialize_torch_tensor
+from hypermind.compression.serialization import deserialize_tensor_stream, deserialize_torch_tensor
+from hypermind.p2p import StubBase
+from hypermind.p2p.p2p_daemon_bindings.control import DEFAULT_MAX_MSG_SIZE, MAX_UNARY_PAYLOAD_SIZE
+from hypermind.proto import runtime_pb2
+from hypermind.utils.asyncio import aiter_with_timeout, iter_as_aiter
+from hypermind.utils.streaming import split_for_streaming
+from hypermind.utils.tensor_descr import BatchTensorDescriptor
 
 from subnet.client.config import ClientConfig
 from subnet.data_structures import ModuleUID, RPCInfo
@@ -105,7 +105,7 @@ async def run_remote_forward(
     # call RPC on remote server
     size = sum(t.element_size() * t.nelement() for t in inputs)
     forward_fn = _forward_stream if size > MAX_UNARY_PAYLOAD_SIZE // 2 else _forward_unary
-    # Hotfix: we use "// 2" since hivemind==1.1.5 serializes bfloat16 tensors in float32, so they take 2x more space
+    # Hotfix: we use "// 2" since hypermind==1.1.5 serializes bfloat16 tensors in float32, so they take 2x more space
     deserialized_outputs = await forward_fn(uid, serialized_tensors, stub, config, metadata=metadata, **kwargs)
     return nested_pack(deserialized_outputs, structure=rpc_info["outputs_schema"])
 
@@ -144,6 +144,6 @@ async def run_remote_backward(
 
     size = sum(t.element_size() * t.nelement() for t in inputs_and_grad_outputs)
     backward_fn = _backward_stream if size > MAX_UNARY_PAYLOAD_SIZE // 2 else _backward_unary
-    # Hotfix: we use "// 2" since hivemind==1.1.5 serializes bfloat16 tensors in float32, so they take 2x more space
+    # Hotfix: we use "// 2" since hypermind==1.1.5 serializes bfloat16 tensors in float32, so they take 2x more space
     deserialized_grad_inputs = await backward_fn(uid, serialized_tensors, stub, config, metadata=metadata, **kwargs)
     return deserialized_grad_inputs

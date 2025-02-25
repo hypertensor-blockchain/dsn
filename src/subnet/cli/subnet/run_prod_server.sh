@@ -1,7 +1,7 @@
 #!/bin/bash
 set -x
 
-export HIVEMIND_COLORS=true
+export HYPERMIND_COLORS=true
 while true; do
         pkill -f p2p
         pkill -f run_server

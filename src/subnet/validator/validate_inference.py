@@ -5,9 +5,9 @@ Also works to loosely validate the peer is hosting the transformer blocks they s
 import pprint
 import time
 from typing import List, Optional
-import hivemind
-from hivemind import PeerID, DHT
-from hivemind.utils.auth import AuthorizerBase
+import hypermind
+from hypermind import PeerID, DHT
+from hypermind.utils.auth import AuthorizerBase
 import numpy as np
 import torch
 from transformers import AutoTokenizer
@@ -24,9 +24,9 @@ from subnet.substrate.config import SubstrateConfigCustom
 from subnet.utils.auto_config import AutoDistributedConfig, AutoDistributedModelForCausalLM
 from subnet.utils.misc import DUMMY
 
-from hivemind.proto import crypto_pb2
-from hivemind.utils.crypto import Ed25519PrivateKey
-from hivemind.utils.auth import POSAuthorizerLive, POSAuthorizer
+from hypermind.proto import crypto_pb2
+from hypermind.utils.crypto import Ed25519PrivateKey
+from hypermind.utils.auth import POSAuthorizerLive, POSAuthorizer
 from cryptography.hazmat.primitives.asymmetric import ed25519
 import gc
 
@@ -122,7 +122,7 @@ def validate_inference(
               if _ == warmup_steps:
                 start_time = time.perf_counter()
               sess.step(torch.empty(1, n_tokens, config.hidden_size), max_retries=2)
-            except hivemind.p2p.p2p_daemon_bindings.utils.P2PHandlerError as e:
+            except hypermind.p2p.p2p_daemon_bindings.utils.P2PHandlerError as e:
               success = False
               break
             except Exception as e:

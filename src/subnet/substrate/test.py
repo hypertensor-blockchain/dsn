@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import pytest
-import hivemind
+import hypermind
 from substrateinterface import SubstrateInterface, Keypair
 from substrateinterface.exceptions import SubstrateRequestException
 from scalecodec.base import ScaleBytes, RuntimeConfiguration

@@ -8,11 +8,11 @@ from functools import partial
 from typing import Optional
 
 import requests
-from hivemind.dht import DHT, DHTNode
-from hivemind.moe.client.remote_expert_worker import RemoteExpertWorker
-from hivemind.p2p import P2P, P2PContext, PeerID, ServicerBase
-from hivemind.proto import dht_pb2
-from hivemind.utils import get_logger
+from hypermind.dht import DHT, DHTNode
+from hypermind.moe.client.remote_expert_worker import RemoteExpertWorker
+from hypermind.p2p import P2P, P2PContext, PeerID, ServicerBase
+from hypermind.proto import dht_pb2
+from hypermind.utils import get_logger
 
 from subnet.constants import REACHABILITY_API_URL
 

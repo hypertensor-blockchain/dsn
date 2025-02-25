@@ -8,10 +8,10 @@ from functools import partial
 import re
 from typing import Dict, List, Optional, Sequence, Union
 
-from hivemind.dht import DHT, DHTNode, DHTValue
-from hivemind.p2p import PeerID
-from hivemind.utils import DHTExpiration, MPFuture, get_dht_time, get_logger
-from hivemind.dht.crypto import Ed25519SignatureValidator
+from hypermind.dht import DHT, DHTNode, DHTValue
+from hypermind.p2p import PeerID
+from hypermind.utils import DHTExpiration, MPFuture, get_dht_time, get_logger
+from hypermind.dht.crypto import Ed25519SignatureValidator
 
 from subnet.data_structures import (
     CHAIN_DELIMITER,
@@ -36,7 +36,6 @@ def declare_active_modules(
     wait: bool = True,
     record_validator: Optional[Ed25519SignatureValidator] = None,
 ) -> Union[Dict[ModuleUID, bool], MPFuture[Dict[ModuleUID, bool]]]:
-    print("declare_active_modules server_info", server_info)
     """
     Declare that your node serves the specified modules; update timestamps if declared previously
 

@@ -279,7 +279,6 @@ def get_subnet_nodes_included(
   substrate: SubstrateInterface,
   subnet_id: int,
 ):
-  print("get_subnet_nodes_included")
   """
   Function to return all account_ids and subnet_node_ids from the substrate Hypertensor Blockchain
 
@@ -492,6 +491,7 @@ def add_subnet_node(
   substrate: SubstrateInterface,
   keypair: Keypair,
   subnet_id: int,
+  hotkey: str,
   peer_id: str,
   stake_to_be_added: int,
   a: Optional[str] = None,
@@ -511,6 +511,7 @@ def add_subnet_node(
     call_function='add_subnet_node',
     call_params={
       'subnet_id': subnet_id,
+      'hotkey': hotkey,
       'peer_id': peer_id,
       'stake_to_be_added': stake_to_be_added,
       'a': a,
@@ -537,6 +538,56 @@ def add_subnet_node(
   return submit_extrinsic()
 
 def register_subnet_node(
+  substrate: SubstrateInterface,
+  keypair: Keypair,
+  subnet_id: int,
+  hotkey: str,
+  peer_id: str,
+  stake_to_be_added: int,
+  a: Optional[str] = None,
+  b: Optional[str] = None,
+  c: Optional[str] = None,
+) -> ExtrinsicReceipt:
+  """
+  Add subnet validator as subnet subnet_node to blockchain storage
+
+  :param substrate: interface to blockchain
+  :param keypair: keypair of extrinsic caller. Must be a subnet_node in the subnet
+  """
+
+  # compose call
+  call = substrate.compose_call(
+    call_module='Network',
+    call_function='register_subnet_node',
+    call_params={
+      'subnet_id': subnet_id,
+      'hotkey': hotkey,
+      'peer_id': peer_id,
+      'stake_to_be_added': stake_to_be_added,
+      'a': a,
+      'b': b,
+      'c': c,
+    }
+  )
+
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
+  def submit_extrinsic():
+    try:
+      with substrate as _substrate:
+        # get none on retries
+        nonce = _substrate.get_account_nonce(keypair.ss58_address)
+
+        # create signed extrinsic
+        extrinsic = _substrate.create_signed_extrinsic(call=call, keypair=keypair, nonce=nonce)
+
+        receipt = _substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
+        return receipt
+    except SubstrateRequestException as e:
+      print("Failed to send: {}".format(e))
+
+  return submit_extrinsic()
+
+def register_subnet_node_v1(
   substrate: SubstrateInterface,
   keypair: Keypair,
   subnet_id: int,
@@ -921,7 +972,8 @@ def get_subnet_id_by_path(
   path: str
 ):
   """
-  Function to get account_id of subnet hosting subnet_node
+  Function to get python -m subnet.cli.crypto.keygen --path private_key3.key
+ of subnet hosting subnet_node
 
   :param SubstrateInterface: substrate interface from blockchain url
   :param path: path of subnet

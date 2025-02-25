@@ -7,13 +7,13 @@ from functools import partial
 import pprint
 import time
 from typing import Any, Dict, List, Optional
-import hivemind
-from hivemind import PeerID, DHT
-from hivemind.utils import DHTExpiration, get_dht_time
-from hivemind.dht import DHTNode
-from hivemind.utils.auth import AuthorizerBase
-from hivemind.dht.routing import DHTKey
-from hivemind.dht.crypto import Ed25519SignatureValidator, RecordValidatorBase
+import hypermind
+from hypermind import PeerID, DHT
+from hypermind.utils import DHTExpiration, get_dht_time
+from hypermind.dht import DHTNode
+from hypermind.utils.auth import AuthorizerBase
+from hypermind.dht.routing import DHTKey
+from hypermind.dht.crypto import Ed25519SignatureValidator, RecordValidatorBase
 import numpy as np
 import torch
 import math
@@ -26,9 +26,9 @@ from subnet.substrate.chain_functions import get_subnet_id_by_path
 from subnet.substrate.config import SubstrateConfigCustom
 from subnet.utils.auto_config import AutoDistributedConfig
 
-from hivemind.proto import crypto_pb2
-from hivemind.utils.crypto import Ed25519PrivateKey, Ed25519PublicKey
-from hivemind.utils.auth import POSAuthorizerLive, POSAuthorizer
+from hypermind.proto import crypto_pb2
+from hypermind.utils.crypto import Ed25519PrivateKey, Ed25519PublicKey
+from hypermind.utils.auth import POSAuthorizerLive, POSAuthorizer
 from cryptography.hazmat.primitives.asymmetric import ed25519
 import gc
 
@@ -264,7 +264,7 @@ async def measure_inference_steps(
             time, outputs = sess.timed_step(torch.empty(1, n_tokens, config.hidden_size), max_retries=0)
             if _ >= warmup_steps:
               time_steps.append(time)
-          except hivemind.p2p.p2p_daemon_bindings.utils.P2PHandlerError as e:
+          except hypermind.p2p.p2p_daemon_bindings.utils.P2PHandlerError as e:
             print("1", e)
             success = False
             break
@@ -325,7 +325,7 @@ async def measure_inference(
             if _ == warmup_steps:
               start_time = time.perf_counter()
             sess.step(torch.empty(1, n_tokens, config.hidden_size), max_retries=0)
-          except hivemind.p2p.p2p_daemon_bindings.utils.P2PHandlerError as e:
+          except hypermind.p2p.p2p_daemon_bindings.utils.P2PHandlerError as e:
             print("1", e)
             success = False
             break
@@ -477,6 +477,7 @@ if __name__ == "__main__":
     RPC,
     1,
     None,
+    True
   )
   peers_data = asyncio.run(incentives_protocol.run())
   # peers_data = incentives_protocol.run()

@@ -1,5 +1,5 @@
 import argparse
-from hivemind.utils.logging import get_logger
+from hypermind.utils.logging import get_logger
 
 from subnet.substrate.chain_functions import register_subnet_node
 from subnet.substrate.config import SubstrateConfigCustom
@@ -21,9 +21,10 @@ def main():
     # fmt:off
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--subnet_id", type=str, required=True, help="Subnet ID stored on blockchain. ")
+    parser.add_argument("--hotkey", type=str, required=False, help="Hotkey responsible for subnet features. ")
     parser.add_argument("--peer_id", type=str, required=True, help="Peer ID generated using `keygen`")
     parser.add_argument("--stake_to_be_added", type=float, required=True, help="Amount of stake to be added")
-    parser.add_argument("--a", type=str, required=False, default=None, help="Unique identifier for subnet node, such as a public key")
+    parser.add_argument("--bootstrap_peer_id", type=str, required=False, default=None, help="Bootstrap Peer ID generated using `keygen`")
     parser.add_argument("--b", type=str, required=False, default=None, help="Non-unique value for subnet node")
     parser.add_argument("--c", type=str, required=False, default=None, help="Non-unique value for subnet node")
     parser.add_argument("--local", action="store_true", help="Run in local mode, uses LOCAL_RPC")
@@ -31,17 +32,26 @@ def main():
 
     args = parser.parse_args()
     local = args.local
+    phrase = args.phrase
+    hotkey = args.hotkey
+
     if local:
         rpc = os.getenv('LOCAL_RPC')
     else:
         rpc = os.getenv('DEV_RPC')
 
-    substrate = SubstrateConfigCustom(PHRASE, rpc)
+    if phrase is not None:
+        substrate = SubstrateConfigCustom(phrase, rpc)
+    else:
+        substrate = SubstrateConfigCustom(PHRASE, rpc)
+
+    if hotkey is None:
+        hotkey = substrate.keypair.ss58_address
 
     subnet_id = args.subnet_id
     peer_id = args.peer_id
     stake_to_be_added = int(args.stake_to_be_added * 1e18)
-    a = args.a
+    bootstrap_peer_id = args.bootstrap_peer_id
     b = args.b
     c = args.c
 
@@ -50,9 +60,10 @@ def main():
             substrate.interface,
             substrate.keypair,
             subnet_id,
+            hotkey,
             peer_id,
             stake_to_be_added,
-            None,
+            bootstrap_peer_id,
             None,
             None
         )

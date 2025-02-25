@@ -10,15 +10,15 @@ import threading
 import time
 from typing import Dict, List, Optional, Sequence, Union
 
-import hivemind
+import hypermind
 import psutil
 import torch
 import torch.mps
-from hivemind import DHT, MAX_DHT_TIME_DISCREPANCY_SECONDS, BatchTensorDescriptor, get_dht_time
-from hivemind.moe.server.layers import add_custom_models_from_file
-from hivemind.moe.server.runtime import Runtime
-from hivemind.proto.runtime_pb2 import CompressionType
-from hivemind.utils.logging import get_logger
+from hypermind import DHT, MAX_DHT_TIME_DISCREPANCY_SECONDS, BatchTensorDescriptor, get_dht_time
+from hypermind.moe.server.layers import add_custom_models_from_file
+from hypermind.moe.server.runtime import Runtime
+from hypermind.proto.runtime_pb2 import CompressionType
+from hypermind.utils.logging import get_logger
 from transformers import PretrainedConfig
 
 import subnet
@@ -824,7 +824,7 @@ class ModuleAnnouncerThread(threading.Thread):
         if state == ServerState.OFFLINE:
             self.join()
 
-    def _ping_next_servers(self) -> Dict[hivemind.PeerID, float]:
+    def _ping_next_servers(self) -> Dict[hypermind.PeerID, float]:
         module_infos = get_remote_module_infos(self.dht, self.next_uids, latest=True)
         middle_servers = {peer_id for info in module_infos[:-1] for peer_id in info.servers}
         pinged_servers = set(sample_up_to(middle_servers, self.max_pinged))
@@ -835,7 +835,7 @@ class ModuleAnnouncerThread(threading.Thread):
 
 
 class RuntimeWithDeduplicatedPools(Runtime):
-    """A version of hivemind.moe.server.runtime.Runtime that allows multiple backends to reuse a task pool"""
+    """A version of hypermind.moe.server.runtime.Runtime that allows multiple backends to reuse a task pool"""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

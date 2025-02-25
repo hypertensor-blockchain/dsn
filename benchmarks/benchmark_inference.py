@@ -6,7 +6,7 @@ from time import perf_counter
 
 import numpy as np
 import torch
-from hivemind.utils.logging import get_logger
+from hypermind.utils.logging import get_logger
 from transformers import AutoTokenizer
 
 from subnet import AutoDistributedModelForCausalLM

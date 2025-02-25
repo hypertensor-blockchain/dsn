@@ -2,7 +2,7 @@ import dataclasses
 import os
 from typing import Optional, Sequence, Union
 
-from hivemind import PeerID
+from hypermind import PeerID
 
 from subnet.constants import PUBLIC_INITIAL_PEERS
 
@@ -12,7 +12,7 @@ DEFAULT_MAX_RETRIES = int(_max_retries) if isinstance(_max_retries, str) else No
 
 @dataclasses.dataclass
 class ClientConfig:
-    initial_peers: Sequence[str] = tuple(PUBLIC_INITIAL_PEERS)  # a list of initial peers for hivemind DHT
+    initial_peers: Sequence[str] = tuple(PUBLIC_INITIAL_PEERS)  # a list of initial peers for hypermind DHT
     dht_prefix: Optional[str] = None  # a prefix for all dht keys that correspond to this model (default: model name)
     daemon_startup_timeout: int = 60  # timeout for the libp2p daemon connecting to initial peers
 

@@ -3,10 +3,10 @@ import asyncio
 import hashlib
 import os
 
-from hivemind.proto import crypto_pb2
-from hivemind.p2p.p2p_daemon_bindings.datastructures import PeerID
-from hivemind.utils.logging import get_logger
-from hivemind.p2p.p2p_daemon import P2P
+from hypermind.proto import crypto_pb2
+from hypermind.p2p.p2p_daemon_bindings.datastructures import PeerID
+from hypermind.utils.logging import get_logger
+from hypermind.p2p.p2p_daemon import P2P
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa, ed25519

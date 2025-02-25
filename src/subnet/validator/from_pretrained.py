@@ -6,7 +6,7 @@ import tempfile
 from contextvars import ContextVar
 from typing import List, Optional, Tuple, Union
 
-from hivemind.utils.logging import get_logger
+from hypermind.utils.logging import get_logger
 from transformers import BloomPreTrainedModel, modeling_utils
 
 from subnet.utils.version import get_compatible_model_repo

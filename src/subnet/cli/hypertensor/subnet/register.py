@@ -1,6 +1,6 @@
 import argparse
 
-from hivemind.utils.logging import get_logger
+from hypermind.utils.logging import get_logger
 
 from subnet.substrate.chain_functions import get_max_subnet_registration_blocks, get_min_subnet_registration_blocks, register_subnet
 from subnet.substrate.config import SubstrateConfigCustom
@@ -22,15 +22,21 @@ def main():
     parser.add_argument("--memory_mb", type=str, required=True, help="Subnet memory required to run. ")
     parser.add_argument("--registration_blocks", type=str, required=False, help="How many blocks to allow until activation. ")
     parser.add_argument("--local", action="store_true", help="Run in local mode, uses LOCAL_RPC")
+    parser.add_argument("--phrase", type=str, help="Seed phrase for local RPC")
 
     args = parser.parse_args()
     local = args.local
+    phrase = args.phrase
+
     if local:
         rpc = os.getenv('LOCAL_RPC')
     else:
         rpc = os.getenv('DEV_RPC')
 
-    substrate = SubstrateConfigCustom(PHRASE, rpc)
+    if phrase is not None:
+        substrate = SubstrateConfigCustom(phrase, rpc)
+    else:
+        substrate = SubstrateConfigCustom(PHRASE, rpc)
 
     path = args.path
     memory_mb = args.memory_mb

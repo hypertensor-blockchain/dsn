@@ -4,7 +4,7 @@ import time
 
 import pytest
 import torch
-from hivemind.moe.server.runtime import Runtime
+from hypermind.moe.server.runtime import Runtime
 
 from subnet.server.task_pool import PrioritizedTaskPool
 

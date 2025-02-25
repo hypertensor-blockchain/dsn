@@ -95,7 +95,7 @@ def remove_outliers_mad(data, threshold: Optional[float] = 3.5, mad_fallback: Op
 
     return filtered_data
 
-def remove_outliers_zscore(data, threshold: Optional[float] =2.0):
+def remove_outliers_zscore(data, threshold: Optional[float] = 2.0):
     """
     Removes outliers using the Z-score method.
 

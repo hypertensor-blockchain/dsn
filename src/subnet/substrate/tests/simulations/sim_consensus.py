@@ -5,9 +5,9 @@ from subnet.substrate.config import SubstrateConfigCustom
 # from subnet.substrate.consensus import Consensus
 from subnet.substrate.tests.simulations.sim_register_subnet import sim_register_subnet
 from subnet.substrate.tests.test_utils import LOCAL_URL, MODEL_PATH, MODEL_MEMORY_MB, Consensus
-from hivemind.utils.auth import POSAuthorizerLive
+from hypermind.utils.auth import POSAuthorizerLive
 from cryptography.hazmat.primitives.asymmetric import ed25519
-from hivemind.utils.crypto import Ed25519PrivateKey, Ed25519PublicKey
+from hypermind.utils.crypto import Ed25519PrivateKey, Ed25519PublicKey
 
 """
 This test requires a build with a subnet already initialized into the network pallet

@@ -14,14 +14,14 @@ from weakref import WeakMethod
 
 import dijkstar
 import numpy as np
-from hivemind import DHT, P2P, MSGPackSerializer, PeerID
-from hivemind.dht.node import Blacklist
-from hivemind.moe.client.remote_expert_worker import RemoteExpertWorker
-from hivemind.proto import runtime_pb2
-from hivemind.utils.logging import get_logger
-from hivemind.proto import crypto_pb2
-from hivemind.utils.crypto import Ed25519PrivateKey
-from hivemind.utils.auth import POSAuthorizer, POSAuthorizerLive
+from hypermind import DHT, P2P, MSGPackSerializer, PeerID
+from hypermind.dht.node import Blacklist
+from hypermind.moe.client.remote_expert_worker import RemoteExpertWorker
+from hypermind.proto import runtime_pb2
+from hypermind.utils.logging import get_logger
+from hypermind.proto import crypto_pb2
+from hypermind.utils.crypto import Ed25519PrivateKey
+from hypermind.utils.auth import POSAuthorizer, POSAuthorizerLive
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
 from subnet.constants import TEMP_INITIAL_PEERS_LOCATION
@@ -136,7 +136,7 @@ class RemoteSequenceManager:
                 authorizer=POSAuthorizerLive(private_key, subnet_id, SubstrateConfigCustom(PHRASE, rpc).interface)
                 # authorizer=POSAuthorizer(private_key)
             )
-        assert isinstance(dht, DHT) and dht.is_alive(), "`dht` must be a running hivemind.DHT instance"
+        assert isinstance(dht, DHT) and dht.is_alive(), "`dht` must be a running hypermind.DHT instance"
         self.dht = dht
 
         if state.p2p is None:

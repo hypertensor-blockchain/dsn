@@ -2,7 +2,7 @@ import os
 from dataclasses import dataclass
 from typing import Optional, Type, Union
 
-from hivemind import get_logger
+from hypermind import get_logger
 from transformers import AutoConfig, PretrainedConfig, PreTrainedModel
 
 from subnet.utils.hf_auth import always_needs_auth
