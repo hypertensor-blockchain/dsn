@@ -2,7 +2,8 @@ import argparse
 
 from hypermind.utils.logging import get_logger
 
-from subnet.substrate.chain_functions import deactivate_subnet_node, get_hotkey_subnet_node_id
+from subnet.cli.utils import remove_last_command
+from subnet.substrate.chain_functions import add_to_stake, get_hotkey_subnet_node_id, update_hotkey
 from subnet.substrate.config import SubstrateConfigCustom
 from pathlib import Path
 import os
@@ -14,18 +15,19 @@ PHRASE = os.getenv('PHRASE')
 
 logger = get_logger(__name__)
 
-"""
-python -m subnet.cli.hypertensor.subnet_node.deactivate --subnet_id 1
-"""
-
 def main():
     # fmt:off
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("--subnet_id", type=str, required=True, help="Subnet ID you activated your subnet node for. ")
+    parser.add_argument("--old_hotkey", type=str, required=True, help="Amount of stake to be added")
+    parser.add_argument("--new_hotkey", type=str, required=True, help="Amount of stake to be added")
     parser.add_argument("--local", action="store_true", help="Run in local mode, uses LOCAL_RPC")
-    parser.add_argument("--phrase", type=str, help="Seed phrase for local RPC")
+    parser.add_argument("--phrase", type=str, help="Coldkey seed phrase")
 
+    remove_last_command()
+    
     args = parser.parse_args()
+    old_hotkey = args.old_hotkey
+    new_hotkey = args.new_hotkey
     local = args.local
     phrase = args.phrase
 
@@ -39,20 +41,12 @@ def main():
     else:
         substrate = SubstrateConfigCustom(PHRASE, rpc)
 
-    subnet_id = args.subnet_id
-
-    subnet_node_id = get_hotkey_subnet_node_id(
-        substrate.interface,
-        subnet_id,
-        substrate.account_id,
-    )
-
     try:
-        receipt = deactivate_subnet_node(
+        receipt = update_hotkey(
             substrate.interface,
             substrate.keypair,
-            subnet_id,
-            subnet_node_id,
+            old_hotkey,
+            new_hotkey,
         )
         if receipt.is_success:
             print('✅ Success, triggered events:')
@@ -62,6 +56,7 @@ def main():
             print('⚠️ Extrinsic Failed: ', receipt.error_message)
     except Exception as e:
         logger.error("Error: ", e, exc_info=True)
+
 
 
 if __name__ == "__main__":

@@ -5,13 +5,17 @@ import threading
 import time
 from typing import Optional, Tuple
 
+from pathlib import Path
+import os
+from dotenv import load_dotenv
+
 from hypermind.utils.auth import AuthorizerBase
 from hypermind.utils import get_logger
 from hypermind import PeerID
 
 from subnet.scp.incentives.incentives import IncentivesProtocol
 from subnet.substrate.chain_data import RewardsData
-from subnet.substrate.chain_functions import activate_subnet, attest, get_block_number, get_epoch_length, get_reward_result_event, get_subnet_data, get_subnet_id_by_path, get_rewards_submission, get_rewards_validator, get_subnet_node_id, validate
+from subnet.substrate.chain_functions import activate_subnet, attest, get_block_number, get_epoch_length, get_reward_result_event, get_subnet_data, get_subnet_id_by_path, get_rewards_submission, get_rewards_validator, get_hotkey_subnet_node_id, validate
 from subnet.substrate.config import BLOCK_SECS, SubstrateConfigCustom
 from subnet.substrate.utils import get_included_nodes, get_consensus_data, get_next_epoch_start_block, get_submittable_nodes
 
@@ -65,6 +69,7 @@ class Consensus(threading.Thread):
     assert substrate is not None, "account_id must be specified"
     self.server = server
     self.subnet_id = None # Not required in case of not initialized yet
+    self.subnet_node_id = None # Not required in case of not initialized yet
     self.path = path
     self.subnet_accepting_consensus = False
     self.subnet_node_eligible = False
@@ -109,12 +114,13 @@ class Consensus(threading.Thread):
           continue
         
         # initialize subnet node ID once we have the subnet ID
-        if self.subnet_id is not None:
-          self.subnet_node_id = get_subnet_node_id(
+        if self.subnet_id is not None and self.subnet_node_id is None:
+          self.subnet_node_id = get_hotkey_subnet_node_id(
             self.substrate_config.interface,
             self.subnet_id,
             self.account_id,
           )
+          logger.info(f"Subnet Node ID: {self.subnet_node_id}")
 
         # get epoch
         block_number = get_block_number(self.substrate_config.interface)
@@ -184,11 +190,11 @@ class Consensus(threading.Thread):
           time.sleep(BLOCK_SECS)
           continue
         else:
-          logger.info("Validator for epoch %s is %s" % (epoch, validator))
+          logger.info("Validator for epoch %s is Subnet Node ID %s" % (epoch, validator))
 
         is_validator = validator == self.subnet_node_id
         if is_validator:
-          logger.info("We're the chosen validator for epoch %s, validating and auto-attesting..." % epoch)
+          logger.info("We're the chosen validator ID for epoch %s, validating and auto-attesting..." % epoch)
           # check if validated 
           validated = self._get_validator_consensus_submission(epoch)
           if validated == None:
@@ -502,12 +508,12 @@ class Consensus(threading.Thread):
     # redundant
     # if we made it this far and the node is not yet activated, the subnet should be activated
     if not submittable:
-      logger.info(f"Not Submittable, must activate subnet node to activate subnet")
+      logger.info(f"In line to activate subnet")
       time.sleep(BLOCK_SECS)
       self._activate_subnet()
     
     min_node_activation_block = activation_block + BLOCK_SECS*2 * (n-1)
-    max_node_activation_block = activation_block + BLOCK_SECS*2 * n
+    max_node_activation_block = activation_block + BLOCK_SECS*2 * n - 1
 
     print("min_node_activation_block", min_node_activation_block)
     print("max_node_activation_block", max_node_activation_block)
@@ -662,15 +668,26 @@ class Consensus(threading.Thread):
     except Exception as e:
       logger.warning("Reward Result Error: %s" % e, exc_info=True)
       return None
+    
+  def _get_substrate_config(self):
+    """
+    Updates substrate configuration without needing to restart the node
+    This can be used in cases where a subnet node updates its hotkey
+    """
+    load_dotenv(os.path.join(Path.cwd(), '.env'))
+    PHRASE = os.getenv('PHRASE')
+    RPC_RPC = os.getenv('DEV_RPC')
+    self.substrate_config = SubstrateConfigCustom(PHRASE, RPC_RPC)
+    self.account_id = self.substrate_config.account_id
 
   def _is_module_container_healthy(self) -> bool:
-      if self.server.module_container is None:
-          return False
-      
-      if not self.server.module_container.is_healthy():
-          return False
+    if self.server.module_container is None:
+      return False
+    
+    if not self.server.module_container.is_healthy():
+      return False
 
-      return True
+    return True
 
   def shutdown(self):
     logger.info("Shutting down consensus")

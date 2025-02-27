@@ -10,12 +10,6 @@ info_cache = hypermind.TimedStorage()
 
 
 async def check_reachability(peer_id, _, node, *, fetch_info=False, connect_timeout=5, expiration=300, use_cache=True):
-    print("check_reachability")
-    print("check_reachability peer_id", peer_id)
-    print("check_reachability node", node)
-    print("check_reachability fetch_info", fetch_info)
-    print("check_reachability use_cache", use_cache)
-
     if use_cache:
         entry = info_cache.get(peer_id)
         if entry is not None:

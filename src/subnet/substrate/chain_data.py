@@ -33,9 +33,9 @@ custom_rpc_type_registry = {
         ["peer_id", "Vec<u8>"],
         ["initialized", "u64"],
         ["classification", "SubnetNodeClassification"],
-        ["a", "Vec<u8>"],
-        ["b", "Vec<u8>"],
-        ["c", "Vec<u8>"],
+        ["a", "Option<BoundedVec<u8>>"],
+        ["b", "Option<BoundedVec<u8>>"],
+        ["c", "Option<BoundedVec<u8>>"],
       ],
     },
     "SubnetNodeClassification": {
@@ -69,6 +69,10 @@ custom_rpc_type_registry = {
         ["coldkey", "AccountId"],
         ["hotkey", "AccountId"],
         ["peer_id", "Vec<u8>"],
+        ["classification", "SubnetNodeClassification"],
+        ["a", "Vec<u8>"],
+        ["b", "Vec<u8>"],
+        ["c", "Vec<u8>"],
       ],
     },
   }

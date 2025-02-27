@@ -2,7 +2,7 @@ import argparse
 
 from hypermind.utils.logging import get_logger
 
-from subnet.substrate.chain_functions import activate_subnet_node
+from subnet.substrate.chain_functions import activate_subnet_node, get_hotkey_subnet_node_id
 from subnet.substrate.config import SubstrateConfigCustom
 from pathlib import Path
 import os
@@ -41,11 +41,18 @@ def main():
 
     subnet_id = args.subnet_id
 
+    subnet_node_id = get_hotkey_subnet_node_id(
+        substrate.interface,
+        subnet_id,
+        substrate.account_id,
+    )
+
     try:
         receipt = activate_subnet_node(
             substrate.interface,
             substrate.keypair,
             subnet_id,
+            subnet_node_id
         )
         if receipt.is_success:
             print('✅ Success, triggered events:')

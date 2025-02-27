@@ -639,6 +639,7 @@ def activate_subnet_node(
   substrate: SubstrateInterface,
   keypair: Keypair,
   subnet_id: int,
+  subnet_node_id: int,
 ) -> ExtrinsicReceipt:
   """
   Add subnet validator as subnet subnet_node to blockchain storage
@@ -653,6 +654,7 @@ def activate_subnet_node(
     call_function='activate_subnet_node',
     call_params={
       'subnet_id': subnet_id,
+      'subnet_node_id': subnet_node_id,
     }
   )
 
@@ -677,6 +679,7 @@ def deactivate_subnet_node(
   substrate: SubstrateInterface,
   keypair: Keypair,
   subnet_id: int,
+  subnet_node_id: int,
 ) -> ExtrinsicReceipt:
   """
   Add subnet validator as subnet subnet_node to blockchain storage
@@ -691,6 +694,7 @@ def deactivate_subnet_node(
     call_function='activate_subnet_node',
     call_params={
       'subnet_id': subnet_id,
+      'subnet_node_id': subnet_node_id,
     }
   )
 
@@ -715,6 +719,7 @@ def remove_subnet_node(
   substrate: SubstrateInterface,
   keypair: Keypair,
   subnet_id: int,
+  subnet_node_id: int,
 ):
   """
   Remove stake balance towards specified subnet
@@ -732,6 +737,7 @@ def remove_subnet_node(
     call_function='remove_subnet_node',
     call_params={
       'subnet_id': subnet_id,
+      'subnet_node_id': subnet_node_id,
     }
   )
 
@@ -756,6 +762,7 @@ def add_to_stake(
   substrate: SubstrateInterface,
   keypair: Keypair,
   subnet_id: int,
+  subnet_node_id: int,
   stake_to_be_added: int,
 ):
   """
@@ -772,6 +779,8 @@ def add_to_stake(
     call_function='add_to_stake',
     call_params={
       'subnet_id': subnet_id,
+      'subnet_node_id': subnet_node_id,
+      'hotkey': keypair.ss58_address,
       'stake_to_be_added': stake_to_be_added,
     }
   )
@@ -816,7 +825,47 @@ def remove_stake(
     call_function='remove_stake',
     call_params={
       'subnet_id': subnet_id,
+      'hotkey': keypair.ss58_address,
       'stake_to_be_removed': stake_to_be_removed,
+    }
+  )
+
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
+  def submit_extrinsic():
+    try:
+      with substrate as _substrate:
+        # get none on retries
+        nonce = _substrate.get_account_nonce(keypair.ss58_address)
+
+        # create signed extrinsic
+        extrinsic = _substrate.create_signed_extrinsic(call=call, keypair=keypair, nonce=nonce)
+
+        receipt = _substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
+        return receipt
+    except SubstrateRequestException as e:
+      print("Failed to send: {}".format(e))
+
+  return submit_extrinsic()
+
+def claim_stake_unbondings(
+  substrate: SubstrateInterface,
+  keypair: Keypair,
+  subnet_id: int,
+):
+  """
+  Remove balance from unbondings ledger
+
+  :param substrate: interface to blockchain
+  :param keypair: keypair of extrinsic caller. Must be a subnet_node in the subnet
+  :param subnet_id: Subnet ID
+  """
+
+  # compose call
+  call = substrate.compose_call(
+    call_module='Network',
+    call_function='claim_stake_unbondings',
+    call_params={
+      'subnet_id': subnet_id,
     }
   )
 
@@ -878,7 +927,223 @@ def add_to_delegate_stake(
 
   return submit_extrinsic()
 
-def get_subnet_node_id(
+def transfer_delegate_stake(
+  substrate: SubstrateInterface,
+  keypair: Keypair,
+  from_subnet_id: int,
+  to_subnet_id: int,
+  delegate_stake_shares_to_be_switched: int,
+):
+  """
+  Add subnet validator as subnet subnet_node to blockchain storage
+
+  :param substrate: interface to blockchain
+  :param keypair: keypair of extrinsic caller. Must be a subnet_node in the subnet
+  :param stake_to_be_added: stake to be added towards subnet
+  """
+
+  # compose call
+  call = substrate.compose_call(
+    call_module='Network',
+    call_function='transfer_delegate_stake',
+    call_params={
+      'from_subnet_id': from_subnet_id,
+      'to_subnet_id': to_subnet_id,
+      'delegate_stake_shares_to_be_switched': delegate_stake_shares_to_be_switched
+    }
+  )
+
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
+  def submit_extrinsic():
+    try:
+      with substrate as _substrate:
+        # get none on retries
+        nonce = _substrate.get_account_nonce(keypair.ss58_address)
+
+        # create signed extrinsic
+        extrinsic = _substrate.create_signed_extrinsic(call=call, keypair=keypair, nonce=nonce)
+
+        receipt = _substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
+        return receipt
+    except SubstrateRequestException as e:
+      print("Failed to send: {}".format(e))
+
+  return submit_extrinsic()
+
+def remove_delegate_stake(
+  substrate: SubstrateInterface,
+  keypair: Keypair,
+  subnet_id: int,
+  shares_to_be_removed: int,
+):
+  """
+  Remove delegate stake using shares
+
+  :param substrate: interface to blockchain
+  :param keypair: keypair of extrinsic caller. Must be a subnet_node in the subnet
+  :param shares_to_be_removed: sahares to be removed
+  """
+
+  # compose call
+  call = substrate.compose_call(
+    call_module='Network',
+    call_function='add_to_delegate_stake',
+    call_params={
+      'subnet_id': subnet_id,
+      'shares_to_be_removed': shares_to_be_removed,
+    }
+  )
+
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
+  def submit_extrinsic():
+    try:
+      with substrate as _substrate:
+        # get none on retries
+        nonce = _substrate.get_account_nonce(keypair.ss58_address)
+
+        # create signed extrinsic
+        extrinsic = _substrate.create_signed_extrinsic(call=call, keypair=keypair, nonce=nonce)
+
+        receipt = _substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
+        return receipt
+    except SubstrateRequestException as e:
+      print("Failed to send: {}".format(e))
+
+  return submit_extrinsic()
+
+def increase_delegate_stake(
+  substrate: SubstrateInterface,
+  keypair: Keypair,
+  subnet_id: int,
+  amount: int,
+):
+  """
+  Increase delegate stake pool balance to subnet ID
+  Note: This does not increase the balance of a user
+
+  :param substrate: interface to blockchain
+  :param keypair: keypair of extrinsic caller. Must be a subnet_node in the subnet
+  :param amount: TENSOR to be added
+  """
+
+  # compose call
+  call = substrate.compose_call(
+    call_module='Network',
+    call_function='increase_delegate_stake',
+    call_params={
+      'subnet_id': subnet_id,
+      'amount': amount,
+    }
+  )
+
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
+  def submit_extrinsic():
+    try:
+      with substrate as _substrate:
+        # get none on retries
+        nonce = _substrate.get_account_nonce(keypair.ss58_address)
+
+        # create signed extrinsic
+        extrinsic = _substrate.create_signed_extrinsic(call=call, keypair=keypair, nonce=nonce)
+
+        receipt = _substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
+        return receipt
+    except SubstrateRequestException as e:
+      print("Failed to send: {}".format(e))
+
+  return submit_extrinsic()
+
+def update_coldkey(
+  substrate: SubstrateInterface,
+  keypair: Keypair,
+  hotkey: str,
+  new_coldkey: str,
+):
+  """
+  Updates hotkey using coldkey
+
+  Amount must be less than allowed amount that won't allow stake balance to be lower than
+  the required minimum balance
+
+  :param substrate: interface to blockchain
+  :param keypair: coldkey keypair
+  :param hotkey: Hotkey
+  :param new_coldkey: New coldkey
+  """
+
+  # compose call
+  call = substrate.compose_call(
+    call_module='Network',
+    call_function='update_coldkey',
+    call_params={
+      'hotkey': hotkey,
+      'new_coldkey': new_coldkey,
+    }
+  )
+
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
+  def submit_extrinsic():
+    try:
+      with substrate as _substrate:
+        # get none on retries
+        nonce = _substrate.get_account_nonce(keypair.ss58_address)
+
+        # create signed extrinsic
+        extrinsic = _substrate.create_signed_extrinsic(call=call, keypair=keypair, nonce=nonce)
+
+        receipt = _substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
+        return receipt
+    except SubstrateRequestException as e:
+      print("Failed to send: {}".format(e))
+
+  return submit_extrinsic()
+
+def update_hotkey(
+  substrate: SubstrateInterface,
+  keypair: Keypair,
+  old_hotkey: str,
+  new_hotkey: str,
+):
+  """
+  Updates hotkey using coldkey
+
+  Amount must be less than allowed amount that won't allow stake balance to be lower than
+  the required minimum balance
+
+  :param substrate: interface to blockchain
+  :param keypair: coldkey keypair
+  :param old_hotkey: Old hotkey
+  :param new_hotkey: New hotkey
+  """
+
+  # compose call
+  call = substrate.compose_call(
+    call_module='Network',
+    call_function='update_hotkey',
+    call_params={
+      'old_hotkey': old_hotkey,
+      'new_hotkey': new_hotkey,
+    }
+  )
+
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
+  def submit_extrinsic():
+    try:
+      with substrate as _substrate:
+        # get none on retries
+        nonce = _substrate.get_account_nonce(keypair.ss58_address)
+
+        # create signed extrinsic
+        extrinsic = _substrate.create_signed_extrinsic(call=call, keypair=keypair, nonce=nonce)
+
+        receipt = _substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
+        return receipt
+    except SubstrateRequestException as e:
+      print("Failed to send: {}".format(e))
+
+  return submit_extrinsic()
+
+def get_hotkey_subnet_node_id(
   substrate: SubstrateInterface,
   subnet_id: int,
   hotkey: str,
@@ -895,11 +1160,57 @@ def get_subnet_node_id(
     try:
       with substrate as _substrate:
         result = _substrate.query('Network', 'HotkeySubnetNodeId', [subnet_id, hotkey])
+        return result
+    except SubstrateRequestException as e:
+      print("Failed to get rpc request: {}".format(e))
+
+  return make_query()
+
+def get_hotkey_owner(
+  substrate: SubstrateInterface,
+  hotkey: str,
+) -> ExtrinsicReceipt:
+  """
+  Add subnet validator as subnet subnet_node to blockchain storage
+
+  :param substrate: interface to blockchain
+  :param keypair: keypair of extrinsic caller. Must be a subnet_node in the subnet
+  """
+
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
+  def make_query():
+    try:
+      with substrate as _substrate:
+        result = _substrate.query('Network', 'HotkeyOwner', [hotkey])
         return result.value['data']['free']
     except SubstrateRequestException as e:
       print("Failed to get rpc request: {}".format(e))
 
   return make_query()
+
+def get_subnet_node_id_hotkey(
+  substrate: SubstrateInterface,
+  subnet_id: int,
+  hotkey: str,
+) -> ExtrinsicReceipt:
+  """
+  Add subnet validator as subnet subnet_node to blockchain storage
+
+  :param substrate: interface to blockchain
+  :param keypair: keypair of extrinsic caller. Must be a subnet_node in the subnet
+  """
+
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
+  def make_query():
+    try:
+      with substrate as _substrate:
+        result = _substrate.query('Network', 'SubnetNodeIdHotkey', [subnet_id, hotkey])
+        return result.value['data']['free']
+    except SubstrateRequestException as e:
+      print("Failed to get rpc request: {}".format(e))
+
+  return make_query()
+
 
 def get_balance(
   substrate: SubstrateInterface,

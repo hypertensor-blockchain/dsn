@@ -494,18 +494,11 @@ class IncentivesProtocol():
         """
         Uses the block weight and rps weight to determine each nodes score
         """
-        print("get_scores")
-
         subnet_node_weights = []
         num_blocks = state_dict['model_report']['num_blocks']
         node_count = len(state_dict["model_report"]["server_rows"])
         num_blocks_sum = num_blocks * node_count
-        rps_sum = sum(row.get("rps", 0) for row in state_dict["model_report"]["server_rows"])
-
-        print("get_scores num_blocks    ", num_blocks)
-        print("get_scores node_count    ", node_count)
-        print("get_scores num_blocks_sum", num_blocks_sum)
-        print("get_scores rps_sum       ", rps_sum)
+        # rps_sum = sum(row.get("rps", 0) for row in state_dict["model_report"]["server_rows"])
 
         for server in state_dict["model_report"]["server_rows"]:
             peer_id = server["peer_id"]

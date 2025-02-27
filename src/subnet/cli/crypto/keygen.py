@@ -62,7 +62,7 @@ def generate_rsa_private_key(path: str):
     return encoded_digest
 
 def generate_ed25519_private_key(path: str):
-    logger.info("Generating Ed25519 private key")
+    logger.info(f"Generating Ed25519 private key to {path}")
     private_key = ed25519.Ed25519PrivateKey.generate()
 
     raw_private_key = private_key.private_bytes(
@@ -136,7 +136,7 @@ def main():
     peer_id = PeerID(encoded_digest)
     bootstrap_peer_id = PeerID(bootstrap_encoded_digest)
     logger.info(f"Peer ID {peer_id}")
-    logger.info(f"Bootstrap Peer ID (Optional usage) {peer_id}")
+    logger.info(f"Bootstrap Peer ID (Optional usage) {bootstrap_peer_id}")
 
     async def test_identity(identity_path: str):
         p2p = await P2P.create(identity_path=identity_path)

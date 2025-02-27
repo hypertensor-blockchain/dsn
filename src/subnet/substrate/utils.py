@@ -350,8 +350,6 @@ def get_included_nodes(substrate: SubstrateInterface, subnet_id: int) -> List:
 
   subnet_nodes_data = SubnetNode.list_from_vec_u8(result["result"])
 
-  print("get_included_nodes", subnet_nodes_data)
-
   return subnet_nodes_data
 
 def get_eligible_consensus_block(

@@ -100,23 +100,19 @@ class IncentivesProtocol():
                 }
             
             state_dict = self.clean_model_report(state_dict)
-            print("state_dict 2: ", state_dict)
 
             """Try to get the speed scores"""
             if self.benchmark_rps:
                 try:
                     state_dict = await self.measure_rps(state_dict)
-                    print("state_dict 3: ", state_dict)
 
                     epoch = self.get_epoch()
                     self.calculate_rps_data(state_dict, epoch)
-                    # print("state_dict calculated_rps", calculated_rps)
                 except Exception as e:
                     logger.warning("Incentives Protocol Error: ", e)
                     pass
             
             subnet_node_weights = self.get_scores(state_dict)
-            print("subnet_node_weights", subnet_node_weights)
 
             return subnet_node_weights
         except:
@@ -130,38 +126,15 @@ class IncentivesProtocol():
         """
         Removes any peer_ids that don't match the blockchains subnet nodes
         """
-        print("clean_model_report")
         # watch for circular import on testing with measure compute
         subnet_nodes = get_included_nodes(self.substrate.interface, self.subnet_id)
-        print("clean_model_report subnet_nodes", subnet_nodes)
-        # subnet_nodes = [
-        #     SubnetNode(
-        #         account_id="",
-        #         hotkey="",
-        #         peer_id="12D3KooWHRgVBAYr4w56YauwnrgGG2ufF7D2LcMTrfKowm4TmneK",
-        #         initialized=0,
-        #         classification="0",
-        #         a="0",
-        #         b="0",
-        #         c="0"
-        #     ),
-        #     SubnetNode(
-        #         account_id="",
-        #         hotkey="",
-        #         peer_id="12D3KooWMRSF23cFaFPTM9YTz712BSntSY5WmA88Db12E9NqtT8S",
-        #         initialized=0,
-        #         classification="0",
-        #         a="0",
-        #         b="0",
-        #         c="0"
-        #     ),
-        # ]
+
         subnet_nodes = [node.peer_id for node in subnet_nodes]
-        print("clean_model_report subnet_nodes", subnet_nodes)
+
         state_dict["model_report"]["server_rows"] = [
             row for row in state_dict["model_report"]["server_rows"] if row["peer_id"] in subnet_nodes
         ]
-        print("clean_model_report state_dict", state_dict)
+
         return state_dict
 
     async def measure_rps(self, state_dict):
@@ -399,11 +372,6 @@ class IncentivesProtocol():
         node_count = len(state_dict["model_report"]["server_rows"])
         num_blocks_sum = num_blocks * node_count
         rps_sum = sum(row.get("rps", 0) for row in state_dict["model_report"]["server_rows"])
-
-        print("get_scores num_blocks    ", num_blocks)
-        print("get_scores node_count    ", node_count)
-        print("get_scores num_blocks_sum", num_blocks_sum)
-        print("get_scores rps_sum       ", rps_sum)
 
         for server in state_dict["model_report"]["server_rows"]:
             peer_id = server["peer_id"]
