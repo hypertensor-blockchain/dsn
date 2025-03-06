@@ -2,7 +2,8 @@ import argparse
 
 from hypermind.utils.logging import get_logger
 
-from subnet.cli.utils import remove_last_command
+from subnet.cli.utils.coldkey_input import coldkey_delete_print
+from subnet.cli.utils.remove_last_command import remove_last_command
 from subnet.substrate.chain_functions import add_to_stake, get_hotkey_subnet_node_id, update_hotkey
 from subnet.substrate.config import SubstrateConfigCustom
 from pathlib import Path
@@ -57,6 +58,8 @@ def main():
     except Exception as e:
         logger.error("Error: ", e, exc_info=True)
 
+    if phrase:
+        coldkey_delete_print()
 
 
 if __name__ == "__main__":

@@ -2,7 +2,8 @@ import argparse
 
 from hypermind.utils.logging import get_logger
 
-from subnet.cli.utils import remove_last_command
+from subnet.cli.utils.coldkey_input import coldkey_delete_print
+from subnet.cli.utils.remove_last_command import remove_last_command
 from subnet.substrate.chain_functions import update_coldkey
 from subnet.substrate.config import SubstrateConfigCustom
 from pathlib import Path
@@ -21,7 +22,7 @@ def main():
     parser.add_argument("--hotkey", type=str, required=True, help="Subnet node hotkey")
     parser.add_argument("--new_coldkey", type=str, required=True, help="New coldkey of subnet node")
     parser.add_argument("--local", action="store_true", help="Run in local mode, uses LOCAL_RPC")
-    parser.add_argument("--phrase", type=str, help="Current coldkey seed phrase")
+    parser.add_argument("--phrase", type=str, help="Current coldkey seed phrase being used to update the to the new coldkey")
 
     remove_last_command()
     
@@ -57,6 +58,8 @@ def main():
     except Exception as e:
         logger.error("Error: ", e, exc_info=True)
 
+    if phrase:
+        coldkey_delete_print()
 
 
 if __name__ == "__main__":

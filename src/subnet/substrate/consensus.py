@@ -23,18 +23,6 @@ from subnet.utils.math import saturating_div, saturating_sub
 
 logger = get_logger(__name__)
 
-# logging.basicConfig(
-#   filename="debug.log",  # File to store logs
-#   level=logging.DEBUG,  # Log only errors and critical messages
-#   format=f"%(asctime)s - %(levelname)s - %(message)s"
-# )
-
-# logging.basicConfig(
-#   filename="error.log",  # File to store logs
-#   level=logging.ERROR,  # Log only errors and critical messages
-#   format=f"%(asctime)s - %(levelname)s - %(message)s"
-# )
-
 MAX_ATTEST_CHECKS = 3
 
 class AttestReason(Enum):
@@ -172,8 +160,7 @@ class Consensus(threading.Thread):
             self.subnet_node_eligible = True
           else:
             # If included, query consensus data anyway and save to self.previous_epoch_data
-            is_included = self.is_included()
-            if is_included:
+            if self.is_included():
               self.attest(epoch, attest=False)
             logger.info("Node not eligible for consensus, sleeping until next epoch")
             time.sleep(remaining_blocks_until_next_epoch * BLOCK_SECS)
@@ -616,21 +603,30 @@ class Consensus(threading.Thread):
 
     success = set1 == set2
 
-    # if not success:
-    #   logger_ledger.custom("ATTEST L1: validator data: %s, attestor_data: %s" % (set1, set2))
+    if not success:
+      logger.debug("ATTEST L1: validator data: %s, attestor_data: %s" % (set1, set2))
 
     """
     The following accounts for nodes that go down or back up in the after or before validation submissions and attestations
-    - If nodes leaves DHT before before validator submit consensus and returns after before attestation
-    - If node leaves DHT after validator submits consensus but still available on the blockchain
-    We check the previous epochs data to see if the validator did submit before they left
+
+    # Cases
+
+    Case 1: Node leaves DHT before validator submit consensus and returns before attestation.
+            - Validator data does not include node, Attestors data will include node, creating a mismatch.
+    Case 2: Node leaves DHT after validator submits consensus.
+            - Validator data does include node, Attestors data does not include node, creating a mismatch.
+
+    # Solution
+
+    We check our previous epochs data, if successfully attested, to find symmetry with the validators data.
+
+    * If none of these solutions work, we assume the validator is being dishonest
     """
     if not success and self.previous_epoch_data is not None:
       dif = set1.symmetric_difference(set2)
       success = dif.issubset(self.previous_epoch_data)
       if not success:
-        ...
-        # logger_ledger.custom("ATTEST L2: validator data: %s, attestor_data: %s, dif: %s" % (set1, set2, dif))
+        logger.debug("ATTEST L2: validator data: %s, attestor_data: %s, dif: %s" % (set1, set2, dif))
     elif not success and self.previous_epoch_data is None:
       """
       If this is the nodes first epoch after a restart of the node, check last epochs consensus data
@@ -639,7 +635,8 @@ class Consensus(threading.Thread):
       # This is a backup so we ensure the data was super majority attested to use it
       if previous_epoch_validator_data != None:
         _, attestation_percentage = self._get_reward_result(epoch)
-        if attestation_percentage / 1e9 < .875:
+        if attestation_percentage / 1e9 < .66:
+          # TODO: Check
           success = False
         else:
           previous_epoch_data_onchain = set(frozenset(asdict(d).items()) for d in previous_epoch_validator_data)

@@ -1,6 +1,8 @@
 import argparse
 from hypermind.utils.logging import get_logger
 
+from subnet.cli.utils.coldkey_input import coldkey_delete_print, coldkey_input
+from subnet.cli.utils.remove_last_command import remove_last_command
 from subnet.substrate.chain_functions import register_subnet_node
 from subnet.substrate.config import SubstrateConfigCustom
 from pathlib import Path
@@ -23,8 +25,8 @@ def main():
     parser.add_argument("--subnet_id", type=str, required=True, help="Subnet ID stored on blockchain. ")
     parser.add_argument("--hotkey", type=str, required=False, help="Hotkey responsible for subnet features. ")
     parser.add_argument("--peer_id", type=str, required=True, help="Peer ID generated using `keygen`")
-    parser.add_argument("--stake_to_be_added", type=float, required=True, help="Amount of stake to be added")
     parser.add_argument("--bootstrap_peer_id", type=str, required=False, default=None, help="Bootstrap Peer ID generated using `keygen`")
+    parser.add_argument("--stake_to_be_added", type=float, required=True, help="Amount of stake to be added")
     parser.add_argument("--b", type=str, required=False, default=None, help="Non-unique value for subnet node")
     parser.add_argument("--c", type=str, required=False, default=None, help="Non-unique value for subnet node")
     parser.add_argument("--local", action="store_true", help="Run in local mode, uses LOCAL_RPC")
@@ -34,6 +36,17 @@ def main():
     local = args.local
     phrase = args.phrase
     hotkey = args.hotkey
+
+    if not args.hotkey:
+        confirm = input(
+            f"Are you sure you want to proceed with using the same key for both hotkey and coldkey? ",
+            f"The hotkey is used for frequent operations such as validating and attesting and can be updated by the coldkey. ",
+            f"The coldkey is used for any operations including the movement of tokens. ",
+            f"Are you sure you want to proceed? (yes/no): "
+            ).strip().lower()
+        if confirm not in ["yes", "y"]:
+            print("Action canceled.")
+            return
 
     if local:
         rpc = os.getenv('LOCAL_RPC')
@@ -76,6 +89,8 @@ def main():
     except Exception as e:
         logger.error("Error: ", e, exc_info=True)
 
+    if phrase:
+        coldkey_delete_print()
 
 if __name__ == "__main__":
     main()
