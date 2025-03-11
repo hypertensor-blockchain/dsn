@@ -54,7 +54,7 @@ class Consensus(threading.Thread):
     ):
     super().__init__()
     assert path is not None, "path must be specified"
-    assert substrate is not None, "account_id must be specified"
+    assert substrate is not None, "substrate configuration must be specified"
     self.server = server
     self.subnet_id = None # Not required in case of not initialized yet
     self.subnet_node_id = None # Not required in case of not initialized yet
@@ -67,7 +67,7 @@ class Consensus(threading.Thread):
     self.peer_id = peer_id
 
     self.substrate_config = substrate
-    self.account_id = substrate.account_id
+    self.hotkey = substrate.hotkey
     self.previous_epoch_data = None
 
     self.identity_path = identity_path
@@ -106,7 +106,7 @@ class Consensus(threading.Thread):
           self.subnet_node_id = get_hotkey_subnet_node_id(
             self.substrate_config.interface,
             self.subnet_id,
-            self.account_id,
+            self.hotkey,
           )
           logger.info(f"Subnet Node ID: {self.subnet_node_id}")
 
@@ -348,7 +348,7 @@ class Consensus(threading.Thread):
     _is = False
     #  wait until we are submittable
     for node_set in submittable_nodes:
-      if node_set.hotkey == self.account_id:
+      if node_set.hotkey == self.hotkey:
         _is = True
         break
 
@@ -363,7 +363,7 @@ class Consensus(threading.Thread):
     _is = False
     #  wait until we are submittable
     for node_set in included_nodes:
-      if node_set.hotkey == self.account_id:
+      if node_set.hotkey == self.hotkey:
         _is = True
         break
 
@@ -488,7 +488,7 @@ class Consensus(threading.Thread):
     n = 0
     for node_set in submittable_nodes:
       n+=1
-      if node_set.hotkey == self.account_id:
+      if node_set.hotkey == self.hotkey:
         submittable = True
         break
     
@@ -501,9 +501,6 @@ class Consensus(threading.Thread):
     
     min_node_activation_block = activation_block + BLOCK_SECS*2 * (n-1)
     max_node_activation_block = activation_block + BLOCK_SECS*2 * n - 1
-
-    print("min_node_activation_block", min_node_activation_block)
-    print("max_node_activation_block", max_node_activation_block)
 
     block_number = get_block_number(self.substrate_config.interface)
 
@@ -598,9 +595,6 @@ class Consensus(threading.Thread):
     # Convert my_data to a set
     set2 = set(frozenset(d.items()) for d in my_data)
 
-    print("set1", set1)
-    print("set2", set2)
-
     success = set1 == set2
 
     if not success:
@@ -675,7 +669,7 @@ class Consensus(threading.Thread):
     PHRASE = os.getenv('PHRASE')
     RPC_RPC = os.getenv('DEV_RPC')
     self.substrate_config = SubstrateConfigCustom(PHRASE, RPC_RPC)
-    self.account_id = self.substrate_config.account_id
+    self.hotkey = self.substrate_config.hotkey
 
   def _is_module_container_healthy(self) -> bool:
     if self.server.module_container is None:

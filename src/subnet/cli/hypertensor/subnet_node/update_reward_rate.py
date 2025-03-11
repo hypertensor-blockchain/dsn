@@ -23,12 +23,14 @@ def main():
     # fmt:off
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--subnet_id", type=str, required=True, help="Subnet ID you registered your subnet node for. ")
+    parser.add_argument("--subnet_node_id", type=str, required=False, help="Subnet node ID assigned at registration. ")
     parser.add_argument("--local", action="store_true", help="Run in local mode, uses LOCAL_RPC")
     parser.add_argument("--phrase", type=str, help="Seed phrase for local RPC")
 
     args = parser.parse_args()
     local = args.local
     phrase = args.phrase
+    subnet_node_id = args.subnet_node_id
 
     if local:
         rpc = os.getenv('LOCAL_RPC')
@@ -42,11 +44,12 @@ def main():
 
     subnet_id = args.subnet_id
 
-    subnet_node_id = get_hotkey_subnet_node_id(
-        substrate.interface,
-        subnet_id,
-        substrate.hotkey,
-    )
+    if subnet_node_id is None:
+        subnet_node_id = get_hotkey_subnet_node_id(
+            substrate.interface,
+            subnet_id,
+            substrate.hotkey,
+        )
 
     try:
         receipt = activate_subnet_node(

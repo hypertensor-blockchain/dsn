@@ -49,7 +49,7 @@ def main():
     subnet_node_id = get_hotkey_subnet_node_id(
         substrate.interface,
         subnet_id,
-        substrate.account_id,
+        substrate.hotkey,
     )
 
     try:

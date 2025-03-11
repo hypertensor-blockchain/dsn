@@ -41,7 +41,9 @@ def validate(
 
   :param substrate: interface to blockchain
   :param keypair: keypair of extrinsic caller. Must be a subnet_node in the subnet
-  :param consensus_data: an array of data containing all AccountIds, PeerIds, and scores per subnet hoster
+  :param subnet_id: keypair of extrinsic caller. Must be a subnet_node in the subnet
+  :param data: an array of data containing all AccountIds, PeerIds, and scores per subnet hoster
+  :param args: arbitrary data the validator can send in with consensus data
 
   Note: It's important before calling this to ensure the entrinsic will be successful.
         If the function reverts, the extrinsic is Pays::Yes
@@ -88,13 +90,11 @@ def attest(
   subnet_id: int
 ):
   """
-  Submit consensus data on each epoch with no conditionals
-
-  It is up to prior functions to decide whether to call this function
+  Attest validator submission on current epoch
 
   :param substrate: interface to blockchain
   :param keypair: keypair of extrinsic caller. Must be a subnet_node in the subnet
-  :param consensus_data: an array of data containing all AccountIds, PeerIds, and scores per subnet hoster
+  :param subnet_id: Subnet ID
 
   Note: It's important before calling this to ensure the entrinsic will be successful.
         If the function reverts, the extrinsic is Pays::Yes
@@ -142,10 +142,13 @@ def register_subnet(
   registration_blocks: int
 ) -> ExtrinsicReceipt:
   """
-  Add subnet validator as subnet subnet_node to blockchain storage
+  Register subnet node and stake
 
   :param substrate: interface to blockchain
   :param keypair: keypair of extrinsic caller. Must be a subnet_node in the subnet
+  :param path: path to download the model
+  :param memory_mb: memory requirements to host entire model one time
+  :param registration_blocks: blocks to keep subnet in registration period
   """
 
   # compose call
@@ -181,7 +184,7 @@ def activate_subnet(
   subnet_id: str,
 ) -> ExtrinsicReceipt:
   """
-  Add subnet validator as subnet subnet_node to blockchain storage
+  Activate a registered subnet node
 
   :param substrate: interface to blockchain
   :param keypair: keypair of extrinsic caller. Must be a subnet_node in the subnet
@@ -220,10 +223,11 @@ def remove_subnet(
   subnet_id: str,
 ) -> ExtrinsicReceipt:
   """
-  Add subnet validator as subnet subnet_node to blockchain storage
+  Remove a subnet
 
   :param substrate: interface to blockchain
   :param keypair: keypair of extrinsic caller. Must be a subnet_node in the subnet
+  :param subnet_id: subnet ID
   """
 
   # compose call
@@ -257,6 +261,7 @@ def get_subnet_nodes(
   Function to return all account_ids and subnet_node_ids from the substrate Hypertensor Blockchain
 
   :param SubstrateInterface: substrate interface from blockchain url
+  :param subnet_id: subnet ID
   :returns: subnet_nodes_data
   """
   @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
@@ -280,9 +285,10 @@ def get_subnet_nodes_included(
   subnet_id: int,
 ):
   """
-  Function to return all account_ids and subnet_node_ids from the substrate Hypertensor Blockchain
+  Function to return Included classified account_ids and subnet_node_ids from the substrate Hypertensor Blockchain
 
   :param SubstrateInterface: substrate interface from blockchain url
+  :param subnet_id: subnet ID
   :returns: subnet_nodes_data
   """
   @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
@@ -304,9 +310,10 @@ def get_subnet_nodes_submittable(
   subnet_id: int,
 ):
   """
-  Function to return all account_ids and subnet_node_ids from the substrate Hypertensor Blockchain
+  Function to return Validator classified account_ids and subnet_node_ids from the substrate Hypertensor Blockchain
 
   :param SubstrateInterface: substrate interface from blockchain url
+  :param subnet_id: subnet ID
   :returns: subnet_nodes_data
   """
   @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
@@ -331,9 +338,10 @@ async def get_consensus_data(
   epoch: int
 ):
   """
-  Function to return all account_ids and subnet_node_ids from the substrate Hypertensor Blockchain
+  Query an epochs consesnus submission
 
   :param SubstrateInterface: substrate interface from blockchain url
+  :param subnet_id: subnet I
   :returns: subnet_nodes_data
   """
   @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
@@ -353,43 +361,17 @@ async def get_consensus_data(
 
   return make_rpc_request()
 
-async def get_accountant_data(
-  substrate: SubstrateInterface,
-  subnet_id: int,
-  id: int
-):
-  """
-  Function to return all account_ids and subnet_node_ids from the substrate Hypertensor Blockchain
-
-  :param SubstrateInterface: substrate interface from blockchain url
-  :returns: subnet_nodes_data
-  """
-  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
-  def make_rpc_request():
-    try:
-      with substrate as _substrate:
-        subnet_nodes_data = _substrate.rpc_request(
-          method='network_getAccountantData',
-          params=[
-            subnet_id,
-            id
-          ]
-        )
-        return subnet_nodes_data
-    except SubstrateRequestException as e:
-      print("Failed to get rpc request: {}".format(e))
-
-  return make_rpc_request()
-
 def is_subnet_node_by_peer_id(
   substrate: SubstrateInterface,
   subnet_id: int,
   peer_id: str
 ):
   """
-  Function to return all account_ids and subnet_node_ids from the substrate Hypertensor Blockchain
+  Function to return all account_ids and subnet_node_ids from the substrate Hypertensor Blockchain by peer ID
 
   :param SubstrateInterface: substrate interface from blockchain url
+  :param subnet_id: subnet ID
+  :param peer_id: peer ID
   :returns: subnet_nodes_data
   """
   @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
@@ -414,10 +396,12 @@ def get_minimum_subnet_nodes(
   memory_mb: int,
 ):
   """
-  Function to return all account_ids and subnet_node_ids from the substrate Hypertensor Blockchain
+  Query required nodes based on memory
 
   :param SubstrateInterface: substrate interface from blockchain url
-  :returns: subnet_nodes_data
+  :param memory_mb: Memory as MBs
+
+  :returns: Minimum subnet nodes
   """
   @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
   def make_rpc_request():
@@ -440,9 +424,11 @@ def get_minimum_delegate_stake(
   memory_mb: int,
 ):
   """
-  Function to return all account_ids and subnet_node_ids from the substrate Hypertensor Blockchain
+  Query required minimum stake balance based on memory
 
   :param SubstrateInterface: substrate interface from blockchain url
+  :param memory_mb: Memory as MBs
+
   :returns: subnet_nodes_data
   """
   @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
@@ -466,9 +452,11 @@ def get_subnet_node_info(
   subnet_id: int,
 ):
   """
-  Function to return all account_ids and subnet_node_ids from the substrate Hypertensor Blockchain
+  Function to return all subnet nodes in the SubnetNodeInfo struct format
 
   :param SubstrateInterface: substrate interface from blockchain url
+  :param subnet_id: subnet ID
+
   :returns: subnet_nodes_data
   """
   @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
@@ -493,16 +481,25 @@ def add_subnet_node(
   subnet_id: int,
   hotkey: str,
   peer_id: str,
+  delegate_reward_rate: int,
   stake_to_be_added: int,
   a: Optional[str] = None,
   b: Optional[str] = None,
   c: Optional[str] = None,
 ) -> ExtrinsicReceipt:
   """
-  Add subnet validator as subnet subnet_node to blockchain storage
+  Add subnet validator as subnet subnet_node and stake
 
   :param substrate: interface to blockchain
   :param keypair: keypair of extrinsic caller. Must be a subnet_node in the subnet
+  :param subnet_id: subnet ID
+  :param hotkey: Hotkey of subnet node
+  :param peer_id: peer Id of subnet node
+  :param delegate_reward_rate: reward rate to delegate stakers (1e9)
+  :param stake_to_be_added: amount to stake
+  :param a: unique optional parameter
+  :param b: optional parametr
+  :param c: optional parametr
   """
 
   # compose call
@@ -513,6 +510,7 @@ def add_subnet_node(
       'subnet_id': subnet_id,
       'hotkey': hotkey,
       'peer_id': peer_id,
+      'delegate_reward_rate': delegate_reward_rate,
       'stake_to_be_added': stake_to_be_added,
       'a': a,
       'b': b,
@@ -543,16 +541,25 @@ def register_subnet_node(
   subnet_id: int,
   hotkey: str,
   peer_id: str,
+  delegate_reward_rate: int,
   stake_to_be_added: int,
   a: Optional[str] = None,
   b: Optional[str] = None,
   c: Optional[str] = None,
 ) -> ExtrinsicReceipt:
   """
-  Add subnet validator as subnet subnet_node to blockchain storage
+  Register subnet node and stake
 
   :param substrate: interface to blockchain
   :param keypair: keypair of extrinsic caller. Must be a subnet_node in the subnet
+  :param subnet_id: subnet ID
+  :param hotkey: Hotkey of subnet node
+  :param peer_id: peer Id of subnet node
+  :param delegate_reward_rate: reward rate to delegate stakers (1e9)
+  :param stake_to_be_added: amount to stake
+  :param a: unique optional parameter
+  :param b: optional parametr
+  :param c: optional parametr
   """
 
   # compose call
@@ -563,54 +570,7 @@ def register_subnet_node(
       'subnet_id': subnet_id,
       'hotkey': hotkey,
       'peer_id': peer_id,
-      'stake_to_be_added': stake_to_be_added,
-      'a': a,
-      'b': b,
-      'c': c,
-    }
-  )
-
-  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
-  def submit_extrinsic():
-    try:
-      with substrate as _substrate:
-        # get none on retries
-        nonce = _substrate.get_account_nonce(keypair.ss58_address)
-
-        # create signed extrinsic
-        extrinsic = _substrate.create_signed_extrinsic(call=call, keypair=keypair, nonce=nonce)
-
-        receipt = _substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
-        return receipt
-    except SubstrateRequestException as e:
-      print("Failed to send: {}".format(e))
-
-  return submit_extrinsic()
-
-def register_subnet_node_v1(
-  substrate: SubstrateInterface,
-  keypair: Keypair,
-  subnet_id: int,
-  peer_id: str,
-  stake_to_be_added: int,
-  a: Optional[str] = None,
-  b: Optional[str] = None,
-  c: Optional[str] = None,
-) -> ExtrinsicReceipt:
-  """
-  Add subnet validator as subnet subnet_node to blockchain storage
-
-  :param substrate: interface to blockchain
-  :param keypair: keypair of extrinsic caller. Must be a subnet_node in the subnet
-  """
-
-  # compose call
-  call = substrate.compose_call(
-    call_module='Network',
-    call_function='register_subnet_node',
-    call_params={
-      'subnet_id': subnet_id,
-      'peer_id': peer_id,
+      'delegate_reward_rate': delegate_reward_rate,
       'stake_to_be_added': stake_to_be_added,
       'a': a,
       'b': b,
@@ -642,10 +602,12 @@ def activate_subnet_node(
   subnet_node_id: int,
 ) -> ExtrinsicReceipt:
   """
-  Add subnet validator as subnet subnet_node to blockchain storage
+  Activate registered subnet node
 
   :param substrate: interface to blockchain
   :param keypair: keypair of extrinsic caller. Must be a subnet_node in the subnet
+  :param subnet_id: subnet ID
+  :param subnet_node_id: subnet node ID
   """
 
   # compose call
@@ -682,16 +644,18 @@ def deactivate_subnet_node(
   subnet_node_id: int,
 ) -> ExtrinsicReceipt:
   """
-  Add subnet validator as subnet subnet_node to blockchain storage
+  Temporarily deactivate subnet node
 
   :param substrate: interface to blockchain
   :param keypair: keypair of extrinsic caller. Must be a subnet_node in the subnet
+  :param subnet_id: subnet ID
+  :param subnet_node_id: subnet node ID
   """
 
   # compose call
   call = substrate.compose_call(
     call_module='Network',
-    call_function='activate_subnet_node',
+    call_function='deactivate_subnet_node',
     call_params={
       'subnet_id': subnet_id,
       'subnet_node_id': subnet_node_id,
@@ -722,13 +686,12 @@ def remove_subnet_node(
   subnet_node_id: int,
 ):
   """
-  Remove stake balance towards specified subnet
-
-  Amount must be less than allowed amount that won't allow stake balance to be lower than
-  the required minimum balance
+  Remove subnet node
 
   :param substrate: interface to blockchain
   :param keypair: keypair of extrinsic caller. Must be a subnet_node in the subnet
+  :param subnet_id: subnet ID
+  :param subnet_node_id: subnet node ID
   """
 
   # compose call
@@ -766,10 +729,12 @@ def add_to_stake(
   stake_to_be_added: int,
 ):
   """
-  Add subnet validator as subnet subnet_node to blockchain storage
+  Increase stake balance of a subnet node
 
   :param substrate: interface to blockchain
   :param keypair: keypair of extrinsic caller. Must be a subnet_node in the subnet
+  :param subnet_id: subnet ID
+  :param subnet_node_id: subnet node ID
   :param stake_to_be_added: stake to be added towards subnet
   """
 
@@ -809,10 +774,9 @@ def remove_stake(
   stake_to_be_removed: int,
 ):
   """
-  Remove stake balance towards specified subnet
+  Remove stake balance towards specified subnet.
 
-  Amount must be less than allowed amount that won't allow stake balance to be lower than
-  the required minimum balance
+  Amount must be less than minimum required balance if an activate subnet node.
 
   :param substrate: interface to blockchain
   :param keypair: keypair of extrinsic caller. Must be a subnet_node in the subnet
@@ -850,7 +814,6 @@ def remove_stake(
 def claim_stake_unbondings(
   substrate: SubstrateInterface,
   keypair: Keypair,
-  subnet_id: int,
 ):
   """
   Remove balance from unbondings ledger
@@ -863,10 +826,7 @@ def claim_stake_unbondings(
   # compose call
   call = substrate.compose_call(
     call_module='Network',
-    call_function='claim_stake_unbondings',
-    call_params={
-      'subnet_id': subnet_id,
-    }
+    call_function='claim_unbondings',
   )
 
   @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
@@ -893,10 +853,11 @@ def add_to_delegate_stake(
   stake_to_be_added: int,
 ):
   """
-  Add subnet validator as subnet subnet_node to blockchain storage
+  Add delegate stake balance to subnet
 
   :param substrate: interface to blockchain
   :param keypair: keypair of extrinsic caller. Must be a subnet_node in the subnet
+  :param subnet_id: subnet ID
   :param stake_to_be_added: stake to be added towards subnet
   """
 
@@ -935,10 +896,12 @@ def transfer_delegate_stake(
   delegate_stake_shares_to_be_switched: int,
 ):
   """
-  Add subnet validator as subnet subnet_node to blockchain storage
+  Transfer delegate stake from one subnet to another subnet
 
   :param substrate: interface to blockchain
   :param keypair: keypair of extrinsic caller. Must be a subnet_node in the subnet
+  :param from_subnet_id: from subnet ID 
+  :param to_subnet_id: to subnet ID
   :param stake_to_be_added: stake to be added towards subnet
   """
 
@@ -977,10 +940,11 @@ def remove_delegate_stake(
   shares_to_be_removed: int,
 ):
   """
-  Remove delegate stake using shares
+  Remove delegate stake balance from subnet by shares
 
   :param substrate: interface to blockchain
   :param keypair: keypair of extrinsic caller. Must be a subnet_node in the subnet
+  :param subnet_id: to subnet ID
   :param shares_to_be_removed: sahares to be removed
   """
 
@@ -1019,10 +983,12 @@ def increase_delegate_stake(
 ):
   """
   Increase delegate stake pool balance to subnet ID
-  Note: This does not increase the balance of a user
+
+  Note: This does ''NOT'' increase the balance of a user
 
   :param substrate: interface to blockchain
   :param keypair: keypair of extrinsic caller. Must be a subnet_node in the subnet
+  :param subnet_id: to subnet ID
   :param amount: TENSOR to be added
   """
 
@@ -1060,10 +1026,7 @@ def update_coldkey(
   new_coldkey: str,
 ):
   """
-  Updates hotkey using coldkey
-
-  Amount must be less than allowed amount that won't allow stake balance to be lower than
-  the required minimum balance
+  Update coldkey using current coldkey as keypair
 
   :param substrate: interface to blockchain
   :param keypair: coldkey keypair
@@ -1107,9 +1070,6 @@ def update_hotkey(
   """
   Updates hotkey using coldkey
 
-  Amount must be less than allowed amount that won't allow stake balance to be lower than
-  the required minimum balance
-
   :param substrate: interface to blockchain
   :param keypair: coldkey keypair
   :param old_hotkey: Old hotkey
@@ -1149,10 +1109,12 @@ def get_hotkey_subnet_node_id(
   hotkey: str,
 ) -> ExtrinsicReceipt:
   """
-  Add subnet validator as subnet subnet_node to blockchain storage
+  Query a subnet node ID by its hotkey
 
   :param substrate: interface to blockchain
   :param keypair: keypair of extrinsic caller. Must be a subnet_node in the subnet
+  :param subnet_id: to subnet ID
+  :param hotkey: Hotkey of subnet node
   """
 
   @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
@@ -1171,7 +1133,7 @@ def get_hotkey_owner(
   hotkey: str,
 ) -> ExtrinsicReceipt:
   """
-  Add subnet validator as subnet subnet_node to blockchain storage
+  Get coldkey of hotkey
 
   :param substrate: interface to blockchain
   :param keypair: keypair of extrinsic caller. Must be a subnet_node in the subnet
@@ -1194,10 +1156,11 @@ def get_subnet_node_id_hotkey(
   hotkey: str,
 ) -> ExtrinsicReceipt:
   """
-  Add subnet validator as subnet subnet_node to blockchain storage
+  Query hotkey by subnet node ID
 
   :param substrate: interface to blockchain
   :param keypair: keypair of extrinsic caller. Must be a subnet_node in the subnet
+  :param hotkey: Hotkey of subnet node
   """
 
   @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
@@ -1240,9 +1203,10 @@ def get_subnet_stake_balance(
   address: str
 ):
   """
-  Function to return an accounts stake balance towards a subnet
+  Function to return a subnet node stake balance
 
   :param SubstrateInterface: substrate interface from blockchain url
+  :param subnet_id: Subnet ID
   :param address: address of account_id
   :returns: account stake balance towards subnet
   """
@@ -1257,57 +1221,12 @@ def get_subnet_stake_balance(
 
   return make_query()
 
-def get_subnet_node_account(
-  substrate: SubstrateInterface,
-  subnet_id: int,
-  peer_id: str
-):
-  """
-  Function to account_id of subnet hosting subnet_node
-
-  :param SubstrateInterface: substrate interface from blockchain url
-  :param peer_id: peer_id of subnet validator
-  :returns: account_id of subnet_id => peer_id
-  """
-  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
-  def make_query():
-    try:
-      with substrate as _substrate:
-        result = _substrate.query('Network', 'SubnetNodeAccount', [subnet_id, peer_id])
-        return result
-    except SubstrateRequestException as e:
-      print("Failed to get rpc request: {}".format(e))
-
-  return make_query()
-
-def get_subnet_accounts(
-  substrate: SubstrateInterface,
-  subnet_id: int,
-):
-  """
-  Function to account_id of subnet hosting subnet_node
-
-  :param SubstrateInterface: substrate interface from blockchain url
-  :returns: account_id's of subnet_id
-  """
-  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
-  def make_query():
-    try:
-      with substrate as _substrate:
-        result = _substrate.query('Network', 'SubnetAccount', [subnet_id])
-        return result
-    except SubstrateRequestException as e:
-      print("Failed to get rpc request: {}".format(e))
-
-  return make_query()
-
 def get_subnet_id_by_path(
   substrate: SubstrateInterface,
   path: str
 ):
   """
-  Function to get python -m subnet.cli.crypto.keygen --path private_key3.key
- of subnet hosting subnet_node
+  Query subnet ID by path
 
   :param SubstrateInterface: substrate interface from blockchain url
   :param path: path of subnet
@@ -1466,9 +1385,11 @@ def get_rewards_validator(
   epoch: int
 ):
   """
-  Function to get the consensus blocks interval
+  Query an epochs chosen subnet validator
 
   :param SubstrateInterface: substrate interface from blockchain url
+  :param subnet_id: subnet ID
+  :param epoch: epoch to query SubnetRewardsValidator 
   :returns: epoch_length
   """
 
@@ -1489,9 +1410,12 @@ def get_rewards_submission(
   epoch: int
 ):
   """
-  Function to get the consensus blocks interval
+  Query epochs validator rewards submission
 
   :param SubstrateInterface: substrate interface from blockchain url
+  :param subnet_id: subnet ID
+  :param epoch: epoch to query SubnetRewardsSubmission 
+
   :returns: epoch_length
   """
 
@@ -1508,7 +1432,7 @@ def get_rewards_submission(
 
 def get_min_subnet_registration_blocks(substrate: SubstrateInterface):
   """
-  Function to get the consensus blocks interval
+  Query minimum subnet registration blocks
 
   :param SubstrateInterface: substrate interface from blockchain url
   :returns: epoch_length
@@ -1527,7 +1451,7 @@ def get_min_subnet_registration_blocks(substrate: SubstrateInterface):
 
 def get_max_subnet_registration_blocks(substrate: SubstrateInterface):
   """
-  Function to get the consensus blocks interval
+  Query maximum subnet registration blocks
 
   :param SubstrateInterface: substrate interface from blockchain url
   :returns: epoch_length
@@ -1554,9 +1478,11 @@ def get_reward_result_event(
   epoch: int
 ):
   """
-  Function to return all account_ids and subnet_node_ids from the substrate Hypertensor Blockchain
+  Query the event of an epochs rewards submission
 
   :param SubstrateInterface: substrate interface from blockchain url
+  :param target_subnet_id: subnet ID
+
   :returns: subnet_nodes_data
   """
 

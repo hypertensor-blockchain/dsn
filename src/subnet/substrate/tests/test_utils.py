@@ -83,7 +83,7 @@ def generate_subnet_nodes(count: int):
 class SubstrateConfigTest:
   interface: SubstrateInterface
   keypair: Keypair
-  account_id: str
+  hotkey: str
 
 def get_substrate_config(n: int):
   return SubstrateConfigTest(
@@ -94,7 +94,7 @@ def get_substrate_config(n: int):
 
 # @dataclasses.dataclass
 # class SubnetNode:
-#   account_id: str
+#   hotkey: str
 #   peer_id: str
 
 def get_subnet_nodes_consensus_data(count: int):
@@ -131,8 +131,8 @@ def get_subnet_nodes_consensus_data(count: int):
 
 #     # self.substrate_config = SubstrateConfigCustom(phrase, url)
 #     self.substrate_config = substrate
-#     self.account_id = substrate.account_id
-#     print("TestConsensus __init__ account_id", self.account_id)
+#     self.hotkey = substrate.hotkey
+#     print("TestConsensus __init__ hotkey", self.hotkey)
 
 #     # blockchain constants
 #     self.epoch_length = int(str(get_epoch_length(self.substrate_config.interface)))
@@ -181,7 +181,7 @@ def get_subnet_nodes_consensus_data(count: int):
 #           )
 
 #           for node_set in submittable_nodes:
-#             if node_set.account_id == self.account_id:
+#             if node_set.hotkey == self.hotkey:
 #               self.subnet_node_eligible = True
 #               break
           
@@ -203,7 +203,7 @@ def get_subnet_nodes_consensus_data(count: int):
 #         else:
 #           logger.info("Validator for epoch %s is %s" % (epoch, validator))
 
-#         is_validator = validator == self.account_id
+#         is_validator = validator == self.hotkey
 #         if is_validator:
 #           logger.info("We're the chosen validator for epoch %s, validating and auto-attesting..." % epoch)
 #           # check if validated 
@@ -381,8 +381,8 @@ def get_subnet_nodes_consensus_data(count: int):
 
 #   def _has_attested(self, attested_account_ids) -> bool:
 #     """Get and return the consensus data from the current validator"""
-#     for account_id in attested_account_ids:
-#       if account_id == self.account_id:
+#     for hotkey in attested_account_ids:
+#       if hotkey == self.hotkey:
 #         return True
 #     return False
 
@@ -448,7 +448,7 @@ def get_subnet_nodes_consensus_data(count: int):
 #     n = 0
 #     for node_set in submittable_nodes:
 #       n+=1
-#       if node_set.account_id == self.account_id:
+#       if node_set.hotkey == self.hotkey:
 #         break
 
 #     print("_activate_subnet n", n)
@@ -605,7 +605,7 @@ class Consensus(threading.Thread):
   def __init__(self, path: str, authorizer: None, substrate: SubstrateConfigCustom):
     super().__init__()
     assert path is not None, "path must be specified"
-    assert substrate is not None, "account_id must be specified"
+    assert substrate is not None, "substrate configuration must be specified"
     self.subnet_id = None # Not required in case of not initialized yet
     self.path = path
     self.subnet_accepting_consensus = False
@@ -615,7 +615,7 @@ class Consensus(threading.Thread):
     self.authorizer = authorizer
 
     self.substrate_config = substrate
-    self.account_id = substrate.account_id
+    self.hotkey = substrate.hotkey
 
     self.previous_epoch_data = None
 
@@ -644,13 +644,13 @@ class Consensus(threading.Thread):
         )
         remaining_blocks_until_next_epoch = next_epoch_start_block - block_number
 
-        print("epoch <= self.last_validated_or_attested_epoch", epoch <= self.last_validated_or_attested_epoch, self.account_id)
-        print("epoch <= self.last_validated_or_attested_epoch and self.subnet_accepting_consensus", epoch <= self.last_validated_or_attested_epoch and self.subnet_accepting_consensus, self.account_id)
-        print("self.subnet_accepting_consensus", self.subnet_accepting_consensus, self.account_id)
+        print("epoch <= self.last_validated_or_attested_epoch", epoch <= self.last_validated_or_attested_epoch, self.hotkey)
+        print("epoch <= self.last_validated_or_attested_epoch and self.subnet_accepting_consensus", epoch <= self.last_validated_or_attested_epoch and self.subnet_accepting_consensus, self.hotkey)
+        print("self.subnet_accepting_consensus", self.subnet_accepting_consensus, self.hotkey)
 
         # skip if already validated or attested epoch
         if epoch <= self.last_validated_or_attested_epoch and self.subnet_accepting_consensus:
-          logger.info("Already completed epoch: %s, waiting for the next %s " % (epoch, self.account_id))
+          logger.info("Already completed epoch: %s, waiting for the next %s " % (epoch, self.hotkey))
           time.sleep(BLOCK_SECS * 2)
           continue
 
@@ -688,7 +688,7 @@ class Consensus(threading.Thread):
 
           #  wait until we are submittable
           for node_set in submittable_nodes:
-            if node_set.account_id == self.account_id:
+            if node_set.hotkey == self.hotkey:
               self.subnet_node_eligible = True
               break
           
@@ -711,18 +711,18 @@ class Consensus(threading.Thread):
         else:
           logger.info("Validator for epoch %s is %s" % (epoch, validator))
 
-        is_validator = validator == self.account_id
-        print("is_validator", is_validator, self.account_id)
+        is_validator = validator == self.hotkey
+        print("is_validator", is_validator, self.hotkey)
         if is_validator:
           logger.info("We're the chosen validator for epoch %s, validating and auto-attesting..." % epoch)
           # check if validated already just in case
           validated = self._get_validator_consensus_submission(epoch)
-          print("validated", validated, self.account_id)
+          print("validated", validated, self.hotkey)
 
           if validated == None:
-            print("validated == None", self.account_id)
+            print("validated == None", self.hotkey)
             success = self.validate()
-            print("success = self.validate()", success, self.account_id)
+            print("success = self.validate()", success, self.hotkey)
             # update last validated epoch and continue (this validates and attests in one call)
             if success:
               logger.info("Successfully validate epoch %s" % epoch)
@@ -730,7 +730,7 @@ class Consensus(threading.Thread):
             else:
               logger.warning("Consensus submission unsuccessful, waiting until next block to try again")
           else:
-            print("last_validated_or_attested_epoch = epoch", epoch, self.account_id)
+            print("last_validated_or_attested_epoch = epoch", epoch, self.hotkey)
             # if for any reason on the last attempt it succeeded but didn't propogate
             # because this section should only be called once per epoch and if validator until successful submission of data
             self.last_validated_or_attested_epoch = epoch
@@ -752,7 +752,7 @@ class Consensus(threading.Thread):
           # wait for validator on every block
           time.sleep(BLOCK_SECS * 2)
           block_number = get_block_number(self.substrate_config.interface)
-          logger.warning("In Attest block %s" % self.account_id)
+          logger.warning("In Attest block %s" % self.hotkey)
           logger.info("Block height: %s " % block_number)
 
           epoch = int(block_number / self.epoch_length)
@@ -771,12 +771,12 @@ class Consensus(threading.Thread):
             break
 
           attest_result, reason = self.attest(epoch)
-          print("attest_result", attest_result, self.account_id)
-          print("reason", reason, self.account_id)
+          print("attest_result", attest_result, self.hotkey)
+          print("reason", reason, self.hotkey)
 
           if attest_result == False:
             attest_attempts += 1
-            print("attest_attempts", attest_attempts, self.account_id)
+            print("attest_attempts", attest_attempts, self.hotkey)
 
             if reason == AttestReason.WAITING or reason == AttestReason.ATTEST_FAILED:
               logger.info("AttestReason.WAITING or AttestReason.ATTEST_FAILED")
@@ -806,7 +806,7 @@ class Consensus(threading.Thread):
         logger.error("Consensus Error: %s" % e, exc_info=True)
 
   def validate(self) -> bool:
-    print("validate", self.account_id)
+    print("validate", self.hotkey)
     """Get rewards data and submit consensus"""
     # TODO: Add exception handling
     consensus_data = self._get_consensus_data()
@@ -847,8 +847,8 @@ class Consensus(threading.Thread):
       return False, AttestReason.SHOULD_NOT_ATTEST
     
   def _do_validate(self, data) -> bool:
-    print("_do_validate", self.account_id)
-    print("_do_validate last_validated_or_attested_epoch", self.last_validated_or_attested_epoch, self.account_id)
+    print("_do_validate", self.hotkey)
+    print("_do_validate last_validated_or_attested_epoch", self.last_validated_or_attested_epoch, self.hotkey)
     try:
       receipt = validate(
         self.substrate_config.interface,
@@ -864,9 +864,9 @@ class Consensus(threading.Thread):
       return False
 
   def _do_attest(self) -> bool:
-    print("_do_attest", self.account_id)
+    print("_do_attest", self.hotkey)
     print("_do_attest self.subnet_id", self.subnet_id)
-    print("_do_attest last_validated_or_attested_epoch", self.last_validated_or_attested_epoch, self.account_id)
+    print("_do_attest last_validated_or_attested_epoch", self.last_validated_or_attested_epoch, self.hotkey)
 
     try:
       receipt = attest(
@@ -882,7 +882,7 @@ class Consensus(threading.Thread):
       return False
     
   def _get_consensus_data(self):
-    print("_get_consensus_data", self.account_id)
+    print("_get_consensus_data", self.hotkey)
     result = get_subnet_nodes_included(
       self.substrate_config.interface,
       self.subnet_id
@@ -925,8 +925,8 @@ class Consensus(threading.Thread):
     """Get and return the consensus data from the current validator"""
     for data in attestations:
       print("_has_attested data", data)
-      if data[0] == self.account_id:
-        logger.warning("_has_attested already attested %s" % self.account_id)
+      if data[0] == self.hotkey:
+        logger.warning("_has_attested already attested %s" % self.hotkey)
         return True
     return False
 
@@ -994,7 +994,7 @@ class Consensus(threading.Thread):
     n = 0
     for node_set in submittable_nodes:
       n+=1
-      if node_set.account_id == self.account_id:
+      if node_set.hotkey == self.hotkey:
         submittable = True
         break
     

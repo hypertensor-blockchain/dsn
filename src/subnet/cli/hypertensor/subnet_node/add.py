@@ -1,9 +1,8 @@
 import argparse
 from hypermind.utils.logging import get_logger
 
-from subnet.cli.utils.coldkey_input import coldkey_delete_print, coldkey_input
-from subnet.cli.utils.remove_last_command import remove_last_command
-from subnet.substrate.chain_functions import add_subnet_node, register_subnet_node
+from subnet.cli.utils.phrase_delete_print import coldkey_delete_print
+from subnet.substrate.chain_functions import add_subnet_node
 from subnet.substrate.config import SubstrateConfigCustom
 from pathlib import Path
 import os
@@ -26,6 +25,7 @@ def main():
     parser.add_argument("--hotkey", type=str, required=False, help="Hotkey responsible for subnet node actions")
     parser.add_argument("--peer_id", type=str, required=True, help="Peer ID generated using `keygen`")
     parser.add_argument("--bootstrap_peer_id", type=str, required=False, default=None, help="Bootstrap Peer ID generated using `keygen`")
+    parser.add_argument("--delegate_reward_rate", type=float, required=False, default=0.0, help="Reward weight for your delegate stakers")
     parser.add_argument("--stake_to_be_added", type=float, required=True, help="Amount of stake to be added")
     parser.add_argument("--b", type=str, required=False, default=None, help="Non-unique value for subnet node")
     parser.add_argument("--c", type=str, required=False, default=None, help="Non-unique value for subnet node")
@@ -33,9 +33,6 @@ def main():
     parser.add_argument("--phrase", type=str, required=False, help="Coldkey phrase that controls actions that include funds")
 
     args = parser.parse_args()
-
-    # if args.phrase:
-    #     remove_last_command()
 
     if not args.hotkey:
         confirm = input(
@@ -65,10 +62,9 @@ def main():
     if hotkey is None:
         hotkey = substrate.keypair.ss58_address
 
-    print("hotkey", hotkey)
-
     subnet_id = args.subnet_id
     peer_id = args.peer_id
+    delegate_reward_rate = int(args.delegate_reward_rate * 1e9)
     stake_to_be_added = int(args.stake_to_be_added * 1e18)
     bootstrap_peer_id = args.bootstrap_peer_id
     b = args.b
@@ -81,6 +77,7 @@ def main():
             subnet_id,
             hotkey,
             peer_id,
+            delegate_reward_rate,
             stake_to_be_added,
             bootstrap_peer_id,
             None,

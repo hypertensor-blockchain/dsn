@@ -759,7 +759,7 @@ class InferenceValidator(threading.Thread):
         #     SubstrateConfigCustom.keypair,
         #     self.model_id
         # )
-        # if accountant_account_id == SubstrateConfigCustom.account_id:
+        # if accountant_account_id == SubstrateConfigCustom.hotkey:
         #     self.is_accountant = True
         # else:
         #     self.is_accountant = False

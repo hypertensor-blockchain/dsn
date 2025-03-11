@@ -2,7 +2,7 @@ import argparse
 
 from hypermind.utils.logging import get_logger
 
-from subnet.cli.utils.coldkey_input import coldkey_delete_print
+from subnet.cli.utils.phrase_delete_print import coldkey_delete_print
 from subnet.cli.utils.remove_last_command import remove_last_command
 from subnet.substrate.chain_functions import update_coldkey
 from subnet.substrate.config import SubstrateConfigCustom

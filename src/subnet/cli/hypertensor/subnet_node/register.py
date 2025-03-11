@@ -1,8 +1,7 @@
 import argparse
 from hypermind.utils.logging import get_logger
 
-from subnet.cli.utils.coldkey_input import coldkey_delete_print, coldkey_input
-from subnet.cli.utils.remove_last_command import remove_last_command
+from subnet.cli.utils.phrase_delete_print import coldkey_delete_print
 from subnet.substrate.chain_functions import register_subnet_node
 from subnet.substrate.config import SubstrateConfigCustom
 from pathlib import Path
@@ -26,6 +25,7 @@ def main():
     parser.add_argument("--hotkey", type=str, required=False, help="Hotkey responsible for subnet features. ")
     parser.add_argument("--peer_id", type=str, required=True, help="Peer ID generated using `keygen`")
     parser.add_argument("--bootstrap_peer_id", type=str, required=False, default=None, help="Bootstrap Peer ID generated using `keygen`")
+    parser.add_argument("--delegate_reward_rate", type=float, required=False, default=0.0, help="Reward weight for your delegate stakers")
     parser.add_argument("--stake_to_be_added", type=float, required=True, help="Amount of stake to be added")
     parser.add_argument("--b", type=str, required=False, default=None, help="Non-unique value for subnet node")
     parser.add_argument("--c", type=str, required=False, default=None, help="Non-unique value for subnet node")
@@ -45,7 +45,7 @@ def main():
             f"Are you sure you want to proceed? (yes/no): "
             ).strip().lower()
         if confirm not in ["yes", "y"]:
-            print("Action canceled.")
+            print("Must be yes or y, action canceled.")
             return
 
     if local:
@@ -63,6 +63,7 @@ def main():
 
     subnet_id = args.subnet_id
     peer_id = args.peer_id
+    delegate_reward_rate = int(args.delegate_reward_rate * 1e9)
     stake_to_be_added = int(args.stake_to_be_added * 1e18)
     bootstrap_peer_id = args.bootstrap_peer_id
     b = args.b
@@ -75,6 +76,7 @@ def main():
             subnet_id,
             hotkey,
             peer_id,
+            delegate_reward_rate,
             stake_to_be_added,
             bootstrap_peer_id,
             None,
