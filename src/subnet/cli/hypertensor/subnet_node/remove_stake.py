@@ -2,6 +2,7 @@ import argparse
 
 from hypermind.utils.logging import get_logger
 
+from subnet.cli.utils.phrase_delete_print import coldkey_delete_print
 from subnet.substrate.chain_functions import remove_stake
 from subnet.substrate.config import SubstrateConfigCustom
 from pathlib import Path
@@ -58,6 +59,9 @@ def main():
             print('⚠️ Extrinsic Failed: ', receipt.error_message)
     except Exception as e:
         logger.error("Error: ", e, exc_info=True)
+
+    if phrase:
+        coldkey_delete_print()
 
 if __name__ == "__main__":
     main()

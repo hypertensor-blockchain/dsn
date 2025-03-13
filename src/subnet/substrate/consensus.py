@@ -5,31 +5,23 @@ import threading
 import time
 from typing import Optional, Tuple
 
+from pathlib import Path
+import os
+from dotenv import load_dotenv
+
 from hypermind.utils.auth import AuthorizerBase
 from hypermind.utils import get_logger
 from hypermind import PeerID
 
 from subnet.scp.incentives.incentives import IncentivesProtocol
 from subnet.substrate.chain_data import RewardsData
-from subnet.substrate.chain_functions import activate_subnet, attest, get_block_number, get_epoch_length, get_reward_result_event, get_subnet_data, get_subnet_id_by_path, get_rewards_submission, get_rewards_validator, validate
+from subnet.substrate.chain_functions import activate_subnet, attest, get_block_number, get_epoch_length, get_reward_result_event, get_subnet_data, get_subnet_id_by_path, get_rewards_submission, get_rewards_validator, get_hotkey_subnet_node_id, validate
 from subnet.substrate.config import BLOCK_SECS, SubstrateConfigCustom
 from subnet.substrate.utils import get_included_nodes, get_consensus_data, get_next_epoch_start_block, get_submittable_nodes
 
 from subnet.utils.math import saturating_div, saturating_sub
 
 logger = get_logger(__name__)
-
-# logging.basicConfig(
-#   filename="debug.log",  # File to store logs
-#   level=logging.DEBUG,  # Log only errors and critical messages
-#   format=f"%(asctime)s - %(levelname)s - %(message)s"
-# )
-
-# logging.basicConfig(
-#   filename="error.log",  # File to store logs
-#   level=logging.ERROR,  # Log only errors and critical messages
-#   format=f"%(asctime)s - %(levelname)s - %(message)s"
-# )
 
 MAX_ATTEST_CHECKS = 3
 
@@ -62,9 +54,10 @@ class Consensus(threading.Thread):
     ):
     super().__init__()
     assert path is not None, "path must be specified"
-    assert substrate is not None, "account_id must be specified"
+    assert substrate is not None, "substrate configuration must be specified"
     self.server = server
     self.subnet_id = None # Not required in case of not initialized yet
+    self.subnet_node_id = None # Not required in case of not initialized yet
     self.path = path
     self.subnet_accepting_consensus = False
     self.subnet_node_eligible = False
@@ -74,7 +67,7 @@ class Consensus(threading.Thread):
     self.peer_id = peer_id
 
     self.substrate_config = substrate
-    self.account_id = substrate.account_id
+    self.hotkey = substrate.hotkey
     self.previous_epoch_data = None
 
     self.identity_path = identity_path
@@ -107,6 +100,15 @@ class Consensus(threading.Thread):
 
           time.sleep(BLOCK_SECS)
           continue
+        
+        # initialize subnet node ID once we have the subnet ID
+        if self.subnet_id is not None and self.subnet_node_id is None:
+          self.subnet_node_id = get_hotkey_subnet_node_id(
+            self.substrate_config.interface,
+            self.subnet_id,
+            self.hotkey,
+          )
+          logger.info(f"Subnet Node ID: {self.subnet_node_id}")
 
         # get epoch
         block_number = get_block_number(self.substrate_config.interface)
@@ -158,8 +160,7 @@ class Consensus(threading.Thread):
             self.subnet_node_eligible = True
           else:
             # If included, query consensus data anyway and save to self.previous_epoch_data
-            is_included = self.is_included()
-            if is_included:
+            if self.is_included():
               self.attest(epoch, attest=False)
             logger.info("Node not eligible for consensus, sleeping until next epoch")
             time.sleep(remaining_blocks_until_next_epoch * BLOCK_SECS)
@@ -176,11 +177,11 @@ class Consensus(threading.Thread):
           time.sleep(BLOCK_SECS)
           continue
         else:
-          logger.info("Validator for epoch %s is %s" % (epoch, validator))
+          logger.info("Validator for epoch %s is Subnet Node ID %s" % (epoch, validator))
 
-        is_validator = validator == self.account_id
+        is_validator = validator == self.subnet_node_id
         if is_validator:
-          logger.info("We're the chosen validator for epoch %s, validating and auto-attesting..." % epoch)
+          logger.info("We're the chosen validator ID for epoch %s, validating and auto-attesting..." % epoch)
           # check if validated 
           validated = self._get_validator_consensus_submission(epoch)
           if validated == None:
@@ -347,7 +348,7 @@ class Consensus(threading.Thread):
     _is = False
     #  wait until we are submittable
     for node_set in submittable_nodes:
-      if node_set.coldkey == self.account_id:
+      if node_set.hotkey == self.hotkey:
         _is = True
         break
 
@@ -362,7 +363,7 @@ class Consensus(threading.Thread):
     _is = False
     #  wait until we are submittable
     for node_set in included_nodes:
-      if node_set.coldkey == self.account_id:
+      if node_set.hotkey == self.hotkey:
         _is = True
         break
 
@@ -423,7 +424,8 @@ class Consensus(threading.Thread):
   def _has_attested(self, attestations) -> bool:
     """Get and return the consensus data from the current validator"""
     for data in attestations:
-      if data[0] == self.account_id:
+      # data = { subnet_node_id: block_number}
+      if data[0] == self.subnet_node_id:
         return True
     return False
 
@@ -486,22 +488,19 @@ class Consensus(threading.Thread):
     n = 0
     for node_set in submittable_nodes:
       n+=1
-      if node_set.coldkey == self.account_id:
+      if node_set.hotkey == self.hotkey:
         submittable = True
         break
     
     # redundant
     # if we made it this far and the node is not yet activated, the subnet should be activated
     if not submittable:
-      logger.info(f"Not Submittable, must activate subnet node to activate subnet")
+      logger.info(f"In line to activate subnet")
       time.sleep(BLOCK_SECS)
       self._activate_subnet()
     
     min_node_activation_block = activation_block + BLOCK_SECS*2 * (n-1)
-    max_node_activation_block = activation_block + BLOCK_SECS*2 * n
-
-    print("min_node_activation_block", min_node_activation_block)
-    print("max_node_activation_block", max_node_activation_block)
+    max_node_activation_block = activation_block + BLOCK_SECS*2 * n - 1
 
     block_number = get_block_number(self.substrate_config.interface)
 
@@ -596,26 +595,32 @@ class Consensus(threading.Thread):
     # Convert my_data to a set
     set2 = set(frozenset(d.items()) for d in my_data)
 
-    print("set1", set1)
-    print("set2", set2)
-
     success = set1 == set2
 
-    # if not success:
-    #   logger_ledger.custom("ATTEST L1: validator data: %s, attestor_data: %s" % (set1, set2))
+    if not success:
+      logger.debug("ATTEST L1: validator data: %s, attestor_data: %s" % (set1, set2))
 
     """
     The following accounts for nodes that go down or back up in the after or before validation submissions and attestations
-    - If nodes leaves DHT before before validator submit consensus and returns after before attestation
-    - If node leaves DHT after validator submits consensus but still available on the blockchain
-    We check the previous epochs data to see if the validator did submit before they left
+
+    # Cases
+
+    Case 1: Node leaves DHT before validator submit consensus and returns before attestation.
+            - Validator data does not include node, Attestors data will include node, creating a mismatch.
+    Case 2: Node leaves DHT after validator submits consensus.
+            - Validator data does include node, Attestors data does not include node, creating a mismatch.
+
+    # Solution
+
+    We check our previous epochs data, if successfully attested, to find symmetry with the validators data.
+
+    * If none of these solutions work, we assume the validator is being dishonest
     """
     if not success and self.previous_epoch_data is not None:
       dif = set1.symmetric_difference(set2)
       success = dif.issubset(self.previous_epoch_data)
       if not success:
-        ...
-        # logger_ledger.custom("ATTEST L2: validator data: %s, attestor_data: %s, dif: %s" % (set1, set2, dif))
+        logger.debug("ATTEST L2: validator data: %s, attestor_data: %s, dif: %s" % (set1, set2, dif))
     elif not success and self.previous_epoch_data is None:
       """
       If this is the nodes first epoch after a restart of the node, check last epochs consensus data
@@ -624,7 +629,8 @@ class Consensus(threading.Thread):
       # This is a backup so we ensure the data was super majority attested to use it
       if previous_epoch_validator_data != None:
         _, attestation_percentage = self._get_reward_result(epoch)
-        if attestation_percentage / 1e9 < .875:
+        if attestation_percentage / 1e9 < .66:
+          # TODO: Check
           success = False
         else:
           previous_epoch_data_onchain = set(frozenset(asdict(d).items()) for d in previous_epoch_validator_data)
@@ -653,15 +659,26 @@ class Consensus(threading.Thread):
     except Exception as e:
       logger.warning("Reward Result Error: %s" % e, exc_info=True)
       return None
+    
+  def _get_substrate_config(self):
+    """
+    Updates substrate configuration without needing to restart the node
+    This can be used in cases where a subnet node updates its hotkey
+    """
+    load_dotenv(os.path.join(Path.cwd(), '.env'))
+    PHRASE = os.getenv('PHRASE')
+    RPC_RPC = os.getenv('DEV_RPC')
+    self.substrate_config = SubstrateConfigCustom(PHRASE, RPC_RPC)
+    self.hotkey = self.substrate_config.hotkey
 
   def _is_module_container_healthy(self) -> bool:
-      if self.server.module_container is None:
-          return False
-      
-      if not self.server.module_container.is_healthy():
-          return False
+    if self.server.module_container is None:
+      return False
+    
+    if not self.server.module_container.is_healthy():
+      return False
 
-      return True
+    return True
 
   def shutdown(self):
     logger.info("Shutting down consensus")

@@ -92,7 +92,6 @@ class IncentivesProtocol():
     async def run(self) -> Dict:
         try:
             state_dict = self.get_health_state()
-            print("state_dict 1: ", state_dict)
 
             if state_dict == None:
                 return {
@@ -101,23 +100,19 @@ class IncentivesProtocol():
                 }
             
             state_dict = self.clean_model_report(state_dict)
-            print("state_dict 2: ", state_dict)
 
             """Try to get the speed scores"""
             if self.benchmark_rps:
                 try:
                     state_dict = await self.measure_rps(state_dict)
-                    print("state_dict 3: ", state_dict)
 
                     epoch = self.get_epoch()
                     self.calculate_rps_data(state_dict, epoch)
-                    # print("state_dict calculated_rps", calculated_rps)
                 except Exception as e:
                     logger.warning("Incentives Protocol Error: ", e)
                     pass
             
             subnet_node_weights = self.get_scores(state_dict)
-            print("subnet_node_weights", subnet_node_weights)
 
             return subnet_node_weights
         except:
@@ -131,38 +126,15 @@ class IncentivesProtocol():
         """
         Removes any peer_ids that don't match the blockchains subnet nodes
         """
-        print("clean_model_report")
         # watch for circular import on testing with measure compute
         subnet_nodes = get_included_nodes(self.substrate.interface, self.subnet_id)
-        print("clean_model_report subnet_nodes", subnet_nodes)
-        # subnet_nodes = [
-        #     SubnetNode(
-        #         account_id="",
-        #         hotkey="",
-        #         peer_id="12D3KooWHRgVBAYr4w56YauwnrgGG2ufF7D2LcMTrfKowm4TmneK",
-        #         initialized=0,
-        #         classification="0",
-        #         a="0",
-        #         b="0",
-        #         c="0"
-        #     ),
-        #     SubnetNode(
-        #         account_id="",
-        #         hotkey="",
-        #         peer_id="12D3KooWMRSF23cFaFPTM9YTz712BSntSY5WmA88Db12E9NqtT8S",
-        #         initialized=0,
-        #         classification="0",
-        #         a="0",
-        #         b="0",
-        #         c="0"
-        #     ),
-        # ]
+
         subnet_nodes = [node.peer_id for node in subnet_nodes]
-        print("clean_model_report subnet_nodes", subnet_nodes)
+
         state_dict["model_report"]["server_rows"] = [
             row for row in state_dict["model_report"]["server_rows"] if row["peer_id"] in subnet_nodes
         ]
-        print("clean_model_report state_dict", state_dict)
+
         return state_dict
 
     async def measure_rps(self, state_dict):
@@ -298,35 +270,27 @@ class IncentivesProtocol():
                         success = False
                         break
                 
-                print("time_steps", time_steps)
                 if success:
                     # Compute lower bound to 0 before running IQR
                     Q1 = np.percentile(time_steps, 25)
                     Q3 = np.percentile(time_steps, 75)
                     IQR = Q3 - Q1
                     lower_multiplier = Q1 / IQR
-
-                    print("len(time_steps)", len(time_steps))
                     
                     # Remove upper bound only to remove server anomalies
                     filtered_time_steps = remove_outliers_iqr(time_steps, lower_multiplier=lower_multiplier) # remove outliers
-                    print("len(filtered_time_steps)", len(filtered_time_steps))
                     avg = np.mean(filtered_time_steps)
-                    print("time step average", avg)
                     avg_elapsed = (n_steps - warmup_steps) * avg
-                    print("avg_elapsed", avg_elapsed)
                     if blocks_served_ratio != 1.0:
                         avg_device_rps = (n_steps - warmup_steps) * n_tokens / avg_elapsed * scaling_factor
                     else:
                         avg_device_rps = (n_steps - warmup_steps) * n_tokens / avg_elapsed
-                    print("avg_device_rps", avg_device_rps)
 
                     elapsed = sum(time_steps)
                     if blocks_served_ratio != 1.0:
                         device_rps = ((n_steps - warmup_steps) * n_tokens) / elapsed * scaling_factor
                     else:
                         device_rps = (n_steps - warmup_steps) * n_tokens / elapsed
-                    print("device_rps", device_rps)
 
                     timed_result = {
                         'peer_id': peer_id.to_base58(),
@@ -396,7 +360,6 @@ class IncentivesProtocol():
                     device_rps_list = subnet_node["device_rps_list"]
                     filtered_rps_list = remove_outliers_adaptive(device_rps_list)
                     rps = np.mean(filtered_rps_list)
-                    print("rps np.mean", rps)
                     server["rps"] = rps
                     break
 
@@ -404,30 +367,24 @@ class IncentivesProtocol():
         """
         Uses the block weight and rps weight to determine each nodes score
         """
-        print("get_scores")
-
         subnet_node_weights = []
         num_blocks = state_dict['model_report']['num_blocks']
         node_count = len(state_dict["model_report"]["server_rows"])
         num_blocks_sum = num_blocks * node_count
         rps_sum = sum(row.get("rps", 0) for row in state_dict["model_report"]["server_rows"])
 
-        print("get_scores num_blocks    ", num_blocks)
-        print("get_scores node_count    ", node_count)
-        print("get_scores num_blocks_sum", num_blocks_sum)
-        print("get_scores rps_sum       ", rps_sum)
-
         for server in state_dict["model_report"]["server_rows"]:
             peer_id = server["peer_id"]
+            span_weight = server["span"].end - server["span"].start
+
             # rps = server["rps"]
             # rps_weight = int(rps / rps_sum * 1e4)
-            span_weight = server["span"].end - server["span"].start
             # transformer_block_weight = int(span_weight / num_blocks_sum * 1e4)
             # weight = rps_weight * RPS_WEIGHT + transformer_block_weight * BLOCK_WEIGHT
 
             dict = {
-            "peer_id": str(peer_id),
-            "score": self.get_span_score(span_weight, num_blocks, num_blocks_sum),
+                "peer_id": str(peer_id),
+                "score": self.get_span_score(span_weight, num_blocks, num_blocks_sum),
             }
             subnet_node_weights.append(dict)
 

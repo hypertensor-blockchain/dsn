@@ -11,4 +11,4 @@ class SubstrateConfigCustom:
     self.url = url
     self.interface: SubstrateInterface = SubstrateInterface(url=url)
     self.keypair = Keypair.create_from_uri(phrase)
-    self.account_id = Keypair.create_from_uri(phrase).ss58_address
+    self.hotkey = Keypair.create_from_uri(phrase).ss58_address

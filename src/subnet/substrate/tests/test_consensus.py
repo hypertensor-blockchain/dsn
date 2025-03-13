@@ -156,6 +156,10 @@ class AttestationSystem:
     """Mock method to return previous epoch validator data"""
     return self.previous_epoch_data  # Default case, overridden in tests
 
+  def _get_reward_result(self, epoch):
+    """Mock method to return previous epoch validator data"""
+    return self.previous_epoch_data
+
   def should_attest(self, validator_data: List[ValidatorEntry], my_data: List[dict], epoch: int) -> bool:
     """Actual function logic copied from the provided implementation"""
     
@@ -167,18 +171,33 @@ class AttestationSystem:
 
     success = set1 == set2
 
+    # if not success and self.previous_epoch_data is not None:
+    #   print("Block 2 hit")
+    #   dif = set1.symmetric_difference(set2)
+    #   success = dif.issubset(self.previous_epoch_data)
+    # elif not success and self.previous_epoch_data is None:
+    #   print("Block 3 hit")
+    #   previous_epoch_validator_data = self._get_validator_consensus_submission(epoch - 1)
+    #   if previous_epoch_validator_data is not None:
+    #     print("Block 4 hit")
+    #     previous_epoch_data_onchain = set(frozenset(asdict(d).items()) for d in previous_epoch_validator_data)
+    #     dif = set1.symmetric_difference(set2)
+    #     success = dif.issubset(previous_epoch_data_onchain)
+
     if not success and self.previous_epoch_data is not None:
-      print("if not success and self.previous_epoch_data is not None")
       dif = set1.symmetric_difference(set2)
       success = dif.issubset(self.previous_epoch_data)
     elif not success and self.previous_epoch_data is None:
-      print("elif not success and self.previous_epoch_data is None")
-      previous_epoch_validator_data = self._get_validator_consensus_submission(epoch - 1)
-      if previous_epoch_validator_data is not None:
-        print("if previous_epoch_validator_data is not None")
+      previous_epoch_validator_data = self._get_validator_consensus_submission(epoch-1)
+      # This is a backup so we ensure the data was super majority attested to use it
+      if previous_epoch_validator_data != None:
+        _, attestation_percentage = self._get_reward_result(epoch)
         previous_epoch_data_onchain = set(frozenset(asdict(d).items()) for d in previous_epoch_validator_data)
         dif = set1.symmetric_difference(set2)
         success = dif.issubset(previous_epoch_data_onchain)
+    else:
+      # log only data
+      intersection = set1.intersection(set2)
 
     self.previous_epoch_data = set2
     return success

@@ -54,7 +54,7 @@ class Server:
         self,
         *,
         initial_peers: List[str],
-        account_id: str,
+        hotkey: str,
         dht_prefix: Optional[str],
         converted_model_name_or_path: str,
         public_name: Optional[str] = None,
@@ -98,7 +98,7 @@ class Server:
     ):
         """Create a server with one or more bloom blocks. See run_server.py for documentation."""
         self.is_validator = False
-        self.account_id = account_id
+        self.hotkey = hotkey
 
         converted_model_name_or_path = get_compatible_model_repo(converted_model_name_or_path)
         self.converted_model_name_or_path = converted_model_name_or_path

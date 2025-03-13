@@ -29,15 +29,15 @@ custom_rpc_type_registry = {
     "SubnetNode": {
       "type": "struct",
       "type_mapping": [
-        ["coldkey", "AccountId"],
         ["hotkey", "AccountId"],
         ["peer_id", "Vec<u8>"],
         ["initialized", "u64"],
         ["classification", "SubnetNodeClassification"],
-        # ["delegate_reward_rate": "128"],
-        ["a", "Vec<u8>"],
-        ["b", "Vec<u8>"],
-        ["c", "Vec<u8>"],
+        ["delegate_reward_rate", "u128"],
+        ["last_delegate_reward_rate_update", "u64"],
+        ["a", "Option<BoundedVec<u8>>"],
+        ["b", "Option<BoundedVec<u8>>"],
+        ["c", "Option<BoundedVec<u8>>"],
       ],
     },
     "SubnetNodeClassification": {
@@ -67,9 +67,14 @@ custom_rpc_type_registry = {
     "SubnetNodeInfo": {
       "type": "struct",
       "type_mapping": [
+        ["subnet_node_id", "u32"],
         ["coldkey", "AccountId"],
         ["hotkey", "AccountId"],
         ["peer_id", "Vec<u8>"],
+        ["classification", "SubnetNodeClassification"],
+        ["a", "Vec<u8>"],
+        ["b", "Vec<u8>"],
+        ["c", "Vec<u8>"],
       ],
     },
   }
@@ -282,9 +287,10 @@ class RewardsData:
 @dataclass
 class SubnetNodeInfo:
   """
-  Dataclass for model peer metadata.
+  Dataclass for subnet node info.
   """
 
+  subnet_node_id: int
   coldkey: str
   hotkey: str
   peer_id: str
@@ -292,6 +298,7 @@ class SubnetNodeInfo:
   @classmethod
   def fix_decoded_values(cls, data_decoded: Any) -> "SubnetNodeInfo":
     """Fixes the values of the RewardsData object."""
+    data_decoded["subnet_node_id"] = data_decoded["subnet_node_id"]
     data_decoded["coldkey"] = ss58_encode(
       data_decoded["coldkey"], 42
     )
@@ -354,12 +361,12 @@ class SubnetNode:
   Dataclass for model peer metadata.
   """
 
-  coldkey: str
   hotkey: str
   peer_id: str
   initialized: int
   classification: str
-  # delegate_reward_rate: int
+  delegate_reward_rate: int
+  last_delegate_reward_rate_update: int
   a: str
   b: str
   c: str
@@ -367,16 +374,14 @@ class SubnetNode:
   @classmethod
   def fix_decoded_values(cls, data_decoded: Any) -> "SubnetNode":
     """Fixes the values of the RewardsData object."""
-    data_decoded["coldkey"] = ss58_encode(
-      data_decoded["coldkey"], 42
-    )
     data_decoded["hotkey"] = ss58_encode(
       data_decoded["hotkey"], 42
     )
     data_decoded["peer_id"] = data_decoded["peer_id"]
     data_decoded["initialized"] = data_decoded["initialized"]
     data_decoded["classification"] = data_decoded["classification"]
-    # data_decoded["delegate_reward_rate"] = data_decoded["delegate_reward_rate"]
+    data_decoded["delegate_reward_rate"] = data_decoded["delegate_reward_rate"]
+    data_decoded["last_delegate_reward_rate_update"] = data_decoded["last_delegate_reward_rate_update"]
     data_decoded["a"] = data_decoded["a"]
     data_decoded["b"] = data_decoded["b"]
     data_decoded["c"] = data_decoded["c"]

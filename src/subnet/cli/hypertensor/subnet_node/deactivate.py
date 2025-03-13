@@ -2,7 +2,8 @@ import argparse
 
 from hypermind.utils.logging import get_logger
 
-from subnet.substrate.chain_functions import deactivate_subnet_node
+from subnet.cli.utils.phrase_delete_print import coldkey_delete_print
+from subnet.substrate.chain_functions import deactivate_subnet_node, get_hotkey_subnet_node_id
 from subnet.substrate.config import SubstrateConfigCustom
 from pathlib import Path
 import os
@@ -41,11 +42,18 @@ def main():
 
     subnet_id = args.subnet_id
 
+    subnet_node_id = get_hotkey_subnet_node_id(
+        substrate.interface,
+        subnet_id,
+        substrate.hotkey,
+    )
+
     try:
         receipt = deactivate_subnet_node(
             substrate.interface,
             substrate.keypair,
             subnet_id,
+            subnet_node_id,
         )
         if receipt.is_success:
             print('✅ Success, triggered events:')
@@ -56,6 +64,8 @@ def main():
     except Exception as e:
         logger.error("Error: ", e, exc_info=True)
 
+    if phrase:
+        coldkey_delete_print()
 
 if __name__ == "__main__":
     main()

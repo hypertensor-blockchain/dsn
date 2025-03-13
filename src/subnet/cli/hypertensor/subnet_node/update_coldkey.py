@@ -3,7 +3,8 @@ import argparse
 from hypermind.utils.logging import get_logger
 
 from subnet.cli.utils.phrase_delete_print import coldkey_delete_print
-from subnet.substrate.chain_functions import activate_subnet_node, get_hotkey_subnet_node_id
+from subnet.cli.utils.remove_last_command import remove_last_command
+from subnet.substrate.chain_functions import update_coldkey
 from subnet.substrate.config import SubstrateConfigCustom
 from pathlib import Path
 import os
@@ -15,18 +16,19 @@ PHRASE = os.getenv('PHRASE')
 
 logger = get_logger(__name__)
 
-"""
-python -m subnet.cli.hypertensor.subnet_node.activate --subnet_id 1
-"""
-
 def main():
     # fmt:off
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("--subnet_id", type=str, required=True, help="Subnet ID you registered your subnet node for. ")
+    parser.add_argument("--hotkey", type=str, required=True, help="Subnet node hotkey")
+    parser.add_argument("--new_coldkey", type=str, required=True, help="New coldkey of subnet node")
     parser.add_argument("--local", action="store_true", help="Run in local mode, uses LOCAL_RPC")
-    parser.add_argument("--phrase", type=str, help="Seed phrase for local RPC")
+    parser.add_argument("--phrase", type=str, help="Current coldkey seed phrase being used to update the to the new coldkey")
 
+    remove_last_command()
+    
     args = parser.parse_args()
+    hotkey = args.hotkey
+    new_coldkey = args.new_coldkey
     local = args.local
     phrase = args.phrase
 
@@ -40,20 +42,12 @@ def main():
     else:
         substrate = SubstrateConfigCustom(PHRASE, rpc)
 
-    subnet_id = args.subnet_id
-
-    subnet_node_id = get_hotkey_subnet_node_id(
-        substrate.interface,
-        subnet_id,
-        substrate.hotkey,
-    )
-
     try:
-        receipt = activate_subnet_node(
+        receipt = update_coldkey(
             substrate.interface,
             substrate.keypair,
-            subnet_id,
-            subnet_node_id
+            hotkey,
+            new_coldkey,
         )
         if receipt.is_success:
             print('✅ Success, triggered events:')

@@ -15,7 +15,7 @@ def test_add_delegate_stakers(subnet_id: int, amount: int):
     substrate_config = get_substrate_config(n)
     balance = get_balance(
       substrate_config.interface,
-      substrate_config.account_id
+      substrate_config.hotkey
     )
     print("test_add_delegate_stakers balance", balance)
     balance = int(str(balance))

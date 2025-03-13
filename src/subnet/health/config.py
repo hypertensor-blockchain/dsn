@@ -10,17 +10,17 @@ INITIAL_PEERS = PUBLIC_INITIAL_PEERS
 #     num_blocks=80,
 # )
 
-# MODEL = ModelInfo(
-#     dht_prefix="Llama-3-1-8B-Lexi-Uncensored-V2-hf",
-#     repository="https://huggingface.co/Orenguteng/Llama-3.1-8B-Lexi-Uncensored-V2",
-#     num_blocks=32,
-# )
-
 MODEL = ModelInfo(
-    dht_prefix="bigscience/bloom-560m-petals",
-    repository="https://huggingface.co/bigscience/bloom-560m",
-    num_blocks=24,
+    dht_prefix="Llama-3-1-8B-Lexi-Uncensored-V2-hf",
+    repository="https://huggingface.co/Orenguteng/Llama-3.1-8B-Lexi-Uncensored-V2",
+    num_blocks=32,
 )
+
+# MODEL = ModelInfo(
+#     dht_prefix="bigscience/bloom-560m-petals",
+#     repository="https://huggingface.co/bigscience/bloom-560m",
+#     num_blocks=24,
+# )
 
 MODELS = [
     ModelInfo(

@@ -170,9 +170,7 @@ class Server:
             client_mode=reachable_via_relay,
             **dict(kwargs, authorizer=authorizer)
         )
-        print("after self.dht")
         self.reachability_protocol = ReachabilityProtocol.attach_to_dht(self.dht) if not reachable_via_relay else None
-        print("after self.reachability_protocol")
 
         visible_maddrs_str = [str(a) for a in self.dht.get_visible_maddrs()]
         if initial_peers == PUBLIC_INITIAL_PEERS:
