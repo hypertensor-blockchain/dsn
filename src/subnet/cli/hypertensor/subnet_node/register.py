@@ -39,9 +39,9 @@ def main():
 
     if not args.hotkey:
         confirm = input(
-            f"Are you sure you want to proceed with using the same key for both hotkey and coldkey? ",
-            f"The hotkey is used for frequent operations such as validating and attesting and can be updated by the coldkey. ",
-            f"The coldkey is used for any operations including the movement of tokens. ",
+            f"Are you sure you want to proceed with using the same key for both hotkey and coldkey? "
+            f"The hotkey is used for frequent operations such as validating and attesting and can be updated by the coldkey. "
+            f"The coldkey is used for any operations including the movement of tokens. "
             f"Are you sure you want to proceed? (yes/no): "
             ).strip().lower()
         if confirm not in ["yes", "y"]:
