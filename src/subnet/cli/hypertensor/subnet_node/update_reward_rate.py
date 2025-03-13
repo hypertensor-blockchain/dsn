@@ -25,7 +25,7 @@ def main():
     parser.add_argument("--subnet_id", type=str, required=True, help="Subnet ID you registered your subnet node for. ")
     parser.add_argument("--subnet_node_id", type=str, required=False, help="Subnet node ID assigned at registration. ")
     parser.add_argument("--local", action="store_true", help="Run in local mode, uses LOCAL_RPC")
-    parser.add_argument("--phrase", type=str, help="Seed phrase for local RPC")
+    parser.add_argument("--phrase", type=str, required=False, help="Coldkey phrase that controls actions that include funds")
 
     args = parser.parse_args()
     local = args.local

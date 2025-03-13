@@ -22,7 +22,7 @@ def main():
     parser.add_argument("--hotkey", type=str, required=True, help="Subnet node hotkey")
     parser.add_argument("--new_coldkey", type=str, required=True, help="New coldkey of subnet node")
     parser.add_argument("--local", action="store_true", help="Run in local mode, uses LOCAL_RPC")
-    parser.add_argument("--phrase", type=str, help="Current coldkey seed phrase being used to update the to the new coldkey")
+    parser.add_argument("--phrase", type=str, required=False, help="Coldkey phrase that controls actions that include funds")
 
     remove_last_command()
     

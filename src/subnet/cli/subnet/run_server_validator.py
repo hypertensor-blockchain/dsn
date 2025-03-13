@@ -180,7 +180,7 @@ def main():
                         help="List of pre-loaded LoRA adapters that can be used for inference or training")
 
     parser.add_argument("--local", action="store_true", help="Run in local mode, uses LOCAL_RPC")
-    parser.add_argument("--phrase", type=str, help="Seed phrase for local RPC")
+    parser.add_argument("--phrase", type=str, required=False, help="Coldkey phrase that controls actions that include funds")
     parser.add_argument("--no_consensus", action="store_true", help="Don't start consensus")
 
     # fmt:on

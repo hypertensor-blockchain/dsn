@@ -23,7 +23,7 @@ def main():
     parser.add_argument("--registration_blocks", type=int, required=False, help="How many blocks to allow until activation. ")
     parser.add_argument("--entry_interval", type=int, required=False, help="Blocks between each subnet node entry. ")
     parser.add_argument("--local", action="store_true", help="Run in local mode, uses LOCAL_RPC")
-    parser.add_argument("--phrase", type=str, help="Seed phrase for local RPC")
+    parser.add_argument("--phrase", type=str, required=False, help="Coldkey phrase that controls actions that include funds")
 
     args = parser.parse_args()
     local = args.local

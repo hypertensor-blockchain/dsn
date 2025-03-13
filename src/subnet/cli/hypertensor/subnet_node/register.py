@@ -30,7 +30,7 @@ def main():
     parser.add_argument("--b", type=str, required=False, default=None, help="Non-unique value for subnet node")
     parser.add_argument("--c", type=str, required=False, default=None, help="Non-unique value for subnet node")
     parser.add_argument("--local", action="store_true", help="Run in local mode, uses LOCAL_RPC")
-    parser.add_argument("--phrase", type=str, required=False, default="PHRASE", help="Phrase env title")
+    parser.add_argument("--phrase", type=str, required=False, help="Coldkey phrase that controls actions that include funds")
 
     args = parser.parse_args()
     local = args.local
