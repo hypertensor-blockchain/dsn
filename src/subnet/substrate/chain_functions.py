@@ -139,7 +139,8 @@ def register_subnet(
   keypair: Keypair,
   path: str,
   memory_mb: int,
-  registration_blocks: int
+  registration_blocks: int,
+  entry_interval: int,
 ) -> ExtrinsicReceipt:
   """
   Register subnet node and stake
@@ -149,6 +150,7 @@ def register_subnet(
   :param path: path to download the model
   :param memory_mb: memory requirements to host entire model one time
   :param registration_blocks: blocks to keep subnet in registration period
+  :param entry_interval: blocks required between each subnet node entry
   """
 
   # compose call
@@ -160,6 +162,7 @@ def register_subnet(
         'path': path,
         'memory_mb': memory_mb,
         'registration_blocks': registration_blocks,
+        'entry_interval': entry_interval,
       }
     }
   )
@@ -1454,7 +1457,6 @@ def get_max_subnet_registration_blocks(substrate: SubstrateInterface):
   Query maximum subnet registration blocks
 
   :param SubstrateInterface: substrate interface from blockchain url
-  :returns: epoch_length
   """
 
   @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
@@ -1468,6 +1470,23 @@ def get_max_subnet_registration_blocks(substrate: SubstrateInterface):
 
   return make_query()
 
+def get_max_subnet_entry_interval(substrate: SubstrateInterface):
+  """
+  Query maximum subnet entry interval blocks
+
+  :param SubstrateInterface: substrate interface from blockchain url
+  """
+
+  @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))
+  def make_query():
+    try:
+      with substrate as _substrate:
+        result = _substrate.query('Network', 'MaxSubnetEntryInterval')
+        return result
+    except SubstrateRequestException as e:
+      print("Failed to get rpc request: {}".format(e))
+
+  return make_query()
 
 
 # EVENTS
