@@ -14,7 +14,7 @@ from typing import AsyncContextManager, Dict, Optional, Sequence
 
 import async_timeout
 import torch
-from hivemind.utils import TensorDescriptor, enter_asynchronously, get_logger
+from hypermind.utils import TensorDescriptor, enter_asynchronously, get_logger
 
 from subnet.data_structures import Handle
 from subnet.utils.asyncio import shield_and_wait
@@ -120,7 +120,7 @@ class MemoryCache:
     ) -> Sequence[Handle]:
         """
         This method should be called inside asyncio.shield() because:
-            - hivemind.utils.enter_asynchronously() does not always release the lock on cancellation
+            - hypermind.utils.enter_asynchronously() does not always release the lock on cancellation
         """
         try:
             async with self._wait_for_free_memory(alloc_size, timeout):

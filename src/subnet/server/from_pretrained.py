@@ -16,7 +16,7 @@ import torch
 import torch.nn as nn
 from accelerate import init_empty_weights
 from accelerate.utils import set_module_tensor_to_device
-from hivemind.utils.logging import get_logger
+from hypermind.utils.logging import get_logger
 from huggingface_hub import get_hf_file_metadata, hf_hub_url
 from huggingface_hub.utils import EntryNotFoundError
 from transformers import PretrainedConfig, PreTrainedModel

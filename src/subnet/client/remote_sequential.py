@@ -5,7 +5,7 @@ from contextvars import ContextVar
 from typing import Optional, Union
 
 import torch
-from hivemind import DHT, get_logger
+from hypermind import DHT, get_logger
 from torch import nn
 
 from subnet.client.config import ClientConfig
@@ -56,6 +56,13 @@ class RemoteSequential(nn.Module):
                 rpc=rpc, 
                 **kwargs
             )
+            # sequence_manager = RemoteSequenceManager(
+            #     config, 
+            #     block_uids,
+            #     dht=dht, 
+            #     identity_path=identity_path, 
+            # )
+
         self.sequence_manager = sequence_manager
 
         self._active_session = ContextVar("active_session", default=None)

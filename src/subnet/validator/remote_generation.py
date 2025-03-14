@@ -6,7 +6,7 @@ from typing import Any, ContextManager, Dict, List, Optional, Tuple
 
 import torch
 import transformers
-from hivemind.utils.logging import get_logger
+from hypermind.utils.logging import get_logger
 from torch import Tensor
 from transformers.cache_utils import Cache, DynamicCache
 from transformers.generation.utils import ModelOutput

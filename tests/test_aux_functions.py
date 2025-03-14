@@ -3,7 +3,7 @@ import sys
 
 import pytest
 import torch
-from hivemind import nested_compare, nested_flatten
+from hypermind import nested_compare, nested_flatten
 
 from subnet import AutoDistributedConfig
 from subnet.server.throughput import measure_compute_rps

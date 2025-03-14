@@ -5,8 +5,8 @@ from contextvars import ContextVar
 from typing import Optional, Union
 
 import torch
-from hivemind import DHT, get_logger
-from hivemind.utils.auth import AuthorizerBase
+from hypermind import DHT, get_logger
+from hypermind.utils.auth import AuthorizerBase
 from torch import nn
 
 from subnet.validator.config import ClientConfig

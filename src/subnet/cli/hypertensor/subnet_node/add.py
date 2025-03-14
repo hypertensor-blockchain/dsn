@@ -1,7 +1,8 @@
 import argparse
-from hivemind.utils.logging import get_logger
+from hypermind.utils.logging import get_logger
 
-from subnet.substrate.chain_functions import add_subnet_node, register_subnet_node
+from subnet.cli.utils.phrase_delete_print import coldkey_delete_print
+from subnet.substrate.chain_functions import add_subnet_node
 from subnet.substrate.config import SubstrateConfigCustom
 from pathlib import Path
 import os
@@ -20,28 +21,52 @@ python -m subnet.cli.hypertensor.subnet_node.add --subnet_id 1 --peer_id 12D3Koo
 def main():
     # fmt:off
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("--subnet_id", type=str, required=True, help="Subnet ID stored on blockchain. ")
+    parser.add_argument("--subnet_id", type=str, required=True, help="Subnet ID stored on blockchain")
+    parser.add_argument("--hotkey", type=str, required=False, help="Hotkey responsible for subnet node actions")
     parser.add_argument("--peer_id", type=str, required=True, help="Peer ID generated using `keygen`")
+    parser.add_argument("--bootstrap_peer_id", type=str, required=False, default=None, help="Bootstrap Peer ID generated using `keygen`")
+    parser.add_argument("--delegate_reward_rate", type=float, required=False, default=0.0, help="Reward weight for your delegate stakers")
     parser.add_argument("--stake_to_be_added", type=float, required=True, help="Amount of stake to be added")
-    parser.add_argument("--a", type=str, required=False, default=None, help="Unique identifier for subnet node, such as a public key")
     parser.add_argument("--b", type=str, required=False, default=None, help="Non-unique value for subnet node")
     parser.add_argument("--c", type=str, required=False, default=None, help="Non-unique value for subnet node")
     parser.add_argument("--local", action="store_true", help="Run in local mode, uses LOCAL_RPC")
-    parser.add_argument("--phrase", type=str, required=False, default="PHRASE", help="Phrase env title")
+    parser.add_argument("--phrase", type=str, required=False, help="Coldkey phrase that controls actions that include funds")
 
     args = parser.parse_args()
+
+    if not args.hotkey:
+        confirm = input(
+            f"Are you sure you want to proceed with using the same key for both hotkey and coldkey? "
+            f"The hotkey is used for frequent operations such as validating and attesting and can be updated by the coldkey. "
+            f"The coldkey is used for any operations including the movement of tokens. "
+            f"Are you sure you want to proceed? (yes/no): "
+            ).strip().lower()
+        if confirm not in ["yes", "y"]:
+            print("Action canceled.")
+            return
+
     local = args.local
+    phrase = args.phrase
+    hotkey = args.hotkey
+
     if local:
         rpc = os.getenv('LOCAL_RPC')
     else:
         rpc = os.getenv('DEV_RPC')
+    
+    if phrase is not None:
+        substrate = SubstrateConfigCustom(phrase, rpc)
+    else:
+        substrate = SubstrateConfigCustom(PHRASE, rpc)
 
-    substrate = SubstrateConfigCustom(PHRASE, rpc)
+    if hotkey is None:
+        hotkey = substrate.keypair.ss58_address
 
     subnet_id = args.subnet_id
     peer_id = args.peer_id
+    delegate_reward_rate = int(args.delegate_reward_rate * 1e9)
     stake_to_be_added = int(args.stake_to_be_added * 1e18)
-    a = args.a
+    bootstrap_peer_id = args.bootstrap_peer_id
     b = args.b
     c = args.c
 
@@ -50,9 +75,11 @@ def main():
             substrate.interface,
             substrate.keypair,
             subnet_id,
+            hotkey,
             peer_id,
+            delegate_reward_rate,
             stake_to_be_added,
-            None,
+            bootstrap_peer_id,
             None,
             None
         )
@@ -65,6 +92,8 @@ def main():
     except Exception as e:
         logger.error("Error: ", e, exc_info=True)
 
+    if phrase:
+        coldkey_delete_print()
 
 if __name__ == "__main__":
     main()

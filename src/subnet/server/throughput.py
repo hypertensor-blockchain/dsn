@@ -10,7 +10,7 @@ from typing import Dict, Optional, Sequence, Union
 
 import torch
 import torch.mps
-from hivemind.utils.logging import get_logger
+from hypermind.utils.logging import get_logger
 from transformers import PretrainedConfig
 
 from subnet.server.block_utils import get_model_block, resolve_block_dtype

@@ -2,8 +2,8 @@ from typing import Optional
 
 import torch
 import torch.nn as nn
-from hivemind import DHT
-from hivemind.utils.logging import get_logger
+from hypermind import DHT
+from hypermind.utils.logging import get_logger
 from transformers.modeling_outputs import MoeModelOutputWithPast
 from transformers.models.mixtral import (
     MixtralForCausalLM,

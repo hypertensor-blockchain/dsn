@@ -3,7 +3,7 @@ import re
 from typing import Union
 
 import requests
-from hivemind.utils.logging import TextStyle, get_logger
+from hypermind.utils.logging import TextStyle, get_logger
 from packaging.version import parse
 
 import subnet

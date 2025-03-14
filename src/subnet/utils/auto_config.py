@@ -2,7 +2,7 @@ import os
 from dataclasses import dataclass
 from typing import Optional, Type, Union
 
-from hivemind import get_logger
+from hypermind import get_logger
 from transformers import AutoConfig, PretrainedConfig, PreTrainedModel
 
 from subnet.utils.hf_auth import always_needs_auth
@@ -102,14 +102,11 @@ class DefaultRevisionMixin:
 class AutoDistributedConfig(DefaultRevisionMixin, _AutoDistributedBase):
     _mapping_field = "config"
 
-
 class AutoDistributedModel(DefaultRevisionMixin, _AutoDistributedBase):
     _mapping_field = "model"
 
-
 class AutoDistributedModelForCausalLM(DefaultRevisionMixin, _AutoDistributedBase):
     _mapping_field = "model_for_causal_lm"
-
 
 class AutoDistributedSpeculativeModel(DefaultRevisionMixin, _AutoDistributedBase):
     _mapping_field = "model_for_speculative"

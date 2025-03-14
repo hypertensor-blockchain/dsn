@@ -1,23 +1,23 @@
 """
-A copy of run_dht.py from hivemind with the ReachabilityProtocol added:
+A copy of run_dht.py from hypermind with the ReachabilityProtocol added:
 https://github.com/learning-at-home/hivemind/blob/master/hivemind/hivemind_cli/run_dht.py
 
 This script may be used for launching lightweight CPU machines serving as bootstrap nodes to a DSN swarm.
 
-This may be eventually merged to the hivemind upstream.
+This may be eventually merged to the hypermind upstream.
 """
 
 import argparse
 import time
 from secrets import token_hex
 
-from hivemind.dht import DHT, DHTNode
-from hivemind.utils.logging import get_logger, use_hivemind_log_handler
-from hivemind.utils.networking import log_visible_maddrs
+from hypermind.dht import DHT, DHTNode
+from hypermind.utils.logging import get_logger, use_hypermind_log_handler
+from hypermind.utils.networking import log_visible_maddrs
 
 from subnet.server.reachability import ReachabilityProtocol
 
-use_hivemind_log_handler("in_root_logger")
+use_hypermind_log_handler("in_root_logger")
 logger = get_logger(__name__)
 
 

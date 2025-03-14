@@ -8,7 +8,7 @@ import torch
 import torch.nn as nn
 import transformers
 from accelerate import init_empty_weights
-from hivemind.utils.logging import get_logger
+from hypermind.utils.logging import get_logger
 from huggingface_hub import HfFileSystem, get_hf_file_metadata, hf_hub_url
 from peft.config import PeftConfig
 from peft.tuners import lora

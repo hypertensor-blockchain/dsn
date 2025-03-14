@@ -6,12 +6,12 @@ from dotenv import load_dotenv
 
 import configargparse
 import torch
-from hivemind.proto.runtime_pb2 import CompressionType
-from hivemind.utils import limits
-from hivemind.utils.logging import get_logger
-from hivemind.proto import crypto_pb2
-from hivemind.utils.crypto import Ed25519PrivateKey
-from hivemind.utils.auth import POSAuthorizer, POSAuthorizerLive
+from hypermind.proto.runtime_pb2 import CompressionType
+from hypermind.utils import limits
+from hypermind.utils.logging import get_logger
+from hypermind.proto import crypto_pb2
+from hypermind.utils.crypto import Ed25519PrivateKey
+from hypermind.utils.auth import POSAuthorizerLive
 
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
@@ -52,7 +52,6 @@ def main():
     parser.add_argument('--num_blocks', type=int, default=None, help="The number of blocks to serve")
     parser.add_argument('--block_indices', type=str, default=None, help="Specific block indices to serve")
     parser.add_argument('--dht_prefix', type=str, default=None, help="Announce all blocks with this DHT prefix")
-    # parser.add_argument('--account_id', type=str, default=None, required=False, help="The number of blocks to serve")
 
     parser.add_argument('--port', type=int, required=False,
                         help='Port this server listens to. '
@@ -181,11 +180,15 @@ def main():
                         help="List of pre-loaded LoRA adapters that can be used for inference or training")
 
     parser.add_argument("--local", action="store_true", help="Run in local mode, uses LOCAL_RPC")
+    parser.add_argument("--phrase", type=str, required=False, help="Coldkey phrase that controls actions that include funds")
+    parser.add_argument("--no_consensus", action="store_true", help="Don't start consensus")
 
     # fmt:on
     args = vars(parser.parse_args())
     args.pop("config", None)
     local = args.pop("local")
+    phrase = args.pop("phrase")
+    no_consensus = args.pop("no_consensus")
 
     args["converted_model_name_or_path"] = args.pop("model") or args["converted_model_name_or_path"]
 
@@ -222,6 +225,7 @@ def main():
         max_disk_space, (int, type(None))
     ), "Unrecognized value for --max_disk_space. Correct examples: 1.5GB or 1500MB or 1572864000 (bytes)"
 
+    # TODO: Ensure boostrap nodes are staked on-chain before connecting OR new swarm
     if args.pop("new_swarm"):
         args["initial_peers"] = []
 
@@ -239,8 +243,11 @@ def main():
         rpc = os.getenv('LOCAL_RPC')
     else:
         rpc = os.getenv('DEV_RPC')
-
-    substrate = SubstrateConfigCustom(PHRASE, rpc)
+    
+    if phrase is not None:
+        substrate = SubstrateConfigCustom(phrase, rpc)
+    else:
+        substrate = SubstrateConfigCustom(PHRASE, rpc)
 
     identity_path = args.get('identity_path', None)
     if identity_path is not None:
@@ -249,13 +256,14 @@ def main():
             key_data = crypto_pb2.PrivateKey.FromString(data).data
             raw_private_key = ed25519.Ed25519PrivateKey.from_private_bytes(key_data[:32])
             private_key = Ed25519PrivateKey(private_key=raw_private_key)
-        # authorizer = POSAuthorizer(private_key)
 
         subnet_id = get_subnet_id_by_path(
             substrate.interface, 
             args["converted_model_name_or_path"]
         )
-        authorizer = POSAuthorizerLive(private_key, int(str(subnet_id)), substrate.interface)
+
+        # authorizer = POSAuthorizer(private_key)
+        authorizer = POSAuthorizerLive(private_key, int(str(subnet_id)), substrate.interface)        
 
     server = Server(
         **args,
@@ -266,6 +274,7 @@ def main():
         authorizer=authorizer,
         subnet_id=subnet_id,
         substrate=substrate,
+        no_consensus=no_consensus,
     )
     try:
         server.run()

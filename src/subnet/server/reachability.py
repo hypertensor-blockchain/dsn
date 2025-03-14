@@ -8,11 +8,11 @@ from functools import partial
 from typing import Optional
 
 import requests
-from hivemind.dht import DHT, DHTNode
-from hivemind.moe.client.remote_expert_worker import RemoteExpertWorker
-from hivemind.p2p import P2P, P2PContext, PeerID, ServicerBase
-from hivemind.proto import dht_pb2
-from hivemind.utils import get_logger
+from hypermind.dht import DHT, DHTNode
+from hypermind.moe.client.remote_expert_worker import RemoteExpertWorker
+from hypermind.p2p import P2P, P2PContext, PeerID, ServicerBase
+from hypermind.proto import dht_pb2
+from hypermind.utils import get_logger
 
 from subnet.constants import REACHABILITY_API_URL
 
@@ -37,18 +37,18 @@ def validate_reachability(peer_id, wait_time: float = 7 * 60, retry_delay: float
                 logger.info("Detected a NAT or a firewall, connecting to libp2p relays. This takes a few minutes")
             time.sleep(retry_delay)
         except Exception as e:
-            logger.warning(f"Skipping reachability check because health.petals.dev is down: {repr(e)}")
+            logger.warning(f"Skipping reachability check because dash.hypertensor.org is down: {repr(e)}")
             return
 
     raise RuntimeError(
         f"Server has not become reachable from the Internet:\n\n"
         f"{response['message']}\n\n"
         f"You need to fix your port forwarding and/or firewall settings. How to do that:\n\n"
-        f"    1. Choose a specific port for the Petals server, for example, 31337.\n"
+        f"    1. Choose a specific port for the Subnet server, for example, 31337.\n"
         f"    2. Ensure that this port is accessible from the Internet and not blocked by your firewall.\n"
         f"    3. Add these arguments to explicitly announce your IP address and port to other peers:\n"
-        f"        python -m petals.cli.run_server ... --public_ip {response['your_ip']} --port 31337\n"
-        f"    4. If it does not help, ask for help in our Discord: https://discord.gg/Wuk8BnrEPH\n"
+        f"        python -m subnet.cli.run_server ... --public_ip {response['your_ip']} --port 31337\n"
+        f"    4. If it does not help, ask for help in our Discord: https://discord.gg/bY7NUEweQp\n"
     )
 
 

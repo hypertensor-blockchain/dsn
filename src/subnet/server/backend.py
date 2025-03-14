@@ -5,10 +5,10 @@ from itertools import chain
 from typing import Any, Dict, Optional, Sequence, Tuple, Union
 
 import torch
-from hivemind import BatchTensorDescriptor, TensorDescriptor
-from hivemind.moe.expert_uid import ExpertUID
-from hivemind.moe.server.module_backend import ModuleBackend
-from hivemind.utils import get_logger
+from hypermind import BatchTensorDescriptor, TensorDescriptor
+from hypermind.moe.expert_uid import ExpertUID
+from hypermind.moe.server.module_backend import ModuleBackend
+from hypermind.utils import get_logger
 from tensor_parallel import TensorParallel
 from tensor_parallel.tensor_parallel import PerDeviceTensors
 from transformers import PretrainedConfig

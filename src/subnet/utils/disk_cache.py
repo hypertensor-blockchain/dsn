@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Optional
 
 import huggingface_hub
-from hivemind.utils.logging import get_logger
+from hypermind.utils.logging import get_logger
 
 logger = get_logger(__name__)
 

@@ -1,12 +1,12 @@
 import re
 import asyncio
 import requests
-import hivemind
+import hypermind
 import functools
 from async_timeout import timeout
 from subnet.server.handler import TransformerConnectionHandler
 
-info_cache = hivemind.TimedStorage()
+info_cache = hypermind.TimedStorage()
 
 
 async def check_reachability(peer_id, _, node, *, fetch_info=False, connect_timeout=5, expiration=300, use_cache=True):
@@ -19,38 +19,13 @@ async def check_reachability(peer_id, _, node, *, fetch_info=False, connect_time
         async with timeout(connect_timeout):
             if fetch_info:  # For Subnet servers
                 stub = TransformerConnectionHandler.get_stub(node.p2p, peer_id)
-                response = await stub.rpc_info(hivemind.proto.runtime_pb2.ExpertUID())
-                rpc_info = hivemind.MSGPackSerializer.loads(response.serialized_info)
+                response = await stub.rpc_info(hypermind.proto.runtime_pb2.ExpertUID())
+                rpc_info = hypermind.MSGPackSerializer.loads(response.serialized_info)
                 rpc_info["ok"] = True
             else:  # For DHT-only bootstrap peers
                 await node.p2p._client.connect(peer_id, [])
                 await node.p2p._client.disconnect(peer_id)
                 rpc_info = {"ok": True}
-
-        # if fetch_info:  # For Subnet servers
-        #     stub = TransformerConnectionHandler.get_stub(node.p2p, peer_id)
-        #     response = await stub.rpc_info(hivemind.proto.runtime_pb2.ExpertUID())
-        #     rpc_info = hivemind.MSGPackSerializer.loads(response.serialized_info)
-        #     rpc_info["ok"] = True
-        # else:  # For DHT-only bootstrap peers
-        #     print("For DHT-only bootstrap peers")
-        #     await node.p2p._client.connect(peer_id, [])
-        #     await node.p2p._client.disconnect(peer_id)
-        #     rpc_info = {"ok": True}
-
-        # with timeout(connect_timeout):
-        #     print("with timeout")
-        #     if fetch_info:  # For Subnet servers
-        #         print("For Subnet servers")
-        #         stub = TransformerConnectionHandler.get_stub(node.p2p, peer_id)
-        #         response = await stub.rpc_info(hivemind.proto.runtime_pb2.ExpertUID())
-        #         rpc_info = hivemind.MSGPackSerializer.loads(response.serialized_info)
-        #         rpc_info["ok"] = True
-        #     else:  # For DHT-only bootstrap peers
-        #         print("For DHT-only bootstrap peers")
-        #         await node.p2p._client.connect(peer_id, [])
-        #         await node.p2p._client.disconnect(peer_id)
-        #         rpc_info = {"ok": True}
     except Exception as e:
         # Actual connection error
         if not isinstance(e, asyncio.TimeoutError):
@@ -62,7 +37,7 @@ async def check_reachability(peer_id, _, node, *, fetch_info=False, connect_time
             message = f"Failed to connect in {connect_timeout:.0f} sec. Firewall may be blocking connections"
         rpc_info = {"ok": False, "error": message}
 
-    info_cache.store(peer_id, rpc_info, hivemind.get_dht_time() + expiration)
+    info_cache.store(peer_id, rpc_info, hypermind.get_dht_time() + expiration)
     return rpc_info
 
 

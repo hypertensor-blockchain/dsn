@@ -1,7 +1,7 @@
 from typing import Dict, List
 
 import numpy as np
-from hivemind import PeerID, get_logger
+from hypermind import PeerID, get_logger
 
 from subnet.data_structures import RemoteModuleInfo, RemoteSpanInfo, ServerState
 from subnet.utils.dht import compute_spans

@@ -4,7 +4,7 @@ from typing import Optional
 
 import torch
 import torch.nn as nn
-from hivemind import get_logger
+from hypermind import get_logger
 from transformers import PretrainedConfig
 
 from subnet.utils.misc import DUMMY

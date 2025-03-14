@@ -1,10 +1,10 @@
 from typing import Any, Optional
 
-import hivemind
-from hivemind.utils.auth import AuthorizerBase
+import hypermind
+from hypermind.utils.auth import AuthorizerBase
 import torch
 import torch.nn as nn
-from hivemind.utils.logging import get_logger
+from hypermind.utils.logging import get_logger
 from transformers.cache_utils import Cache
 from transformers.modeling_outputs import BaseModelOutputWithPastAndCrossAttentions
 from transformers.models.bloom import BloomForCausalLM, BloomForSequenceClassification, BloomModel, BloomPreTrainedModel
@@ -39,7 +39,7 @@ class DistributedBloomModel(FromPretrainedMixin, PTuneMixin, BloomModel):
         self, 
         config: DistributedBloomConfig, 
         *, 
-        dht: Optional[hivemind.DHT] = None,
+        dht: Optional[hypermind.DHT] = None,
         identity_path: Optional[str] = None
     ):
         n_layer, config.num_hidden_layers = config.num_hidden_layers, 0  # Prevent initialization
@@ -227,7 +227,7 @@ class DistributedBloomModelValidator(FromPretrainedMixinValidator, PTuneMixinVal
         self, 
         config: DistributedBloomConfigValidator, 
         *, 
-        dht: Optional[hivemind.DHT] = None, 
+        dht: Optional[hypermind.DHT] = None, 
         identity_path: Optional[str] = None
     ):
         n_layer, config.num_hidden_layers = config.num_hidden_layers, 0  # Prevent initialization

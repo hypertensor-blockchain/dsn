@@ -8,11 +8,11 @@ from typing import Optional, Sequence
 import tensor_parallel as tp
 import torch
 import torch.nn as nn
-from hivemind.utils.logging import get_logger, use_hivemind_log_handler
+from hypermind.utils.logging import get_logger, use_hypermind_log_handler
 from tensor_parallel.slicing_configs import get_bloom_config
 from transformers import PretrainedConfig
 
-use_hivemind_log_handler("in_root_logger")
+use_hypermind_log_handler("in_root_logger")
 logger = get_logger(__name__)
 
 

@@ -4,17 +4,17 @@ from dataclasses import asdict
 from functools import partial
 from typing import List
 
-import hivemind
+import hypermind
 import numpy as np
 
-from hivemind.p2p.multiaddr import Multiaddr
+from hypermind.p2p.multiaddr import Multiaddr
 from subnet.data_structures import UID_DELIMITER, ServerState
 from subnet.utils.dht import compute_spans, get_remote_module_infos
 
 from data_structures import ModelInfo
 from p2p_utils import check_reachability_parallel, get_peers_ips, extract_peer_ip_info
 
-logger = hivemind.get_logger(__name__)
+logger = hypermind.get_logger(__name__)
 
 MODEL = ModelInfo(
     dht_prefix="bigscience/bloom-560m-petals",
@@ -24,11 +24,11 @@ MODEL = ModelInfo(
 
 INITIAL_PEERS = ["/ip4/3.16.197.70/tcp/31330/p2p/12D3KooWNujrmWnkXz9Qr4WkPcEWUFgeqkgRKjymkrRUQHgWPFpC"]
 
-def fetch_health_state2(dht: hivemind.DHT) -> dict:
+def fetch_health_state2(dht: hypermind.DHT) -> dict:
     start_time = time.perf_counter()
     bootstrap_peer_ids = []
     for addr in INITIAL_PEERS:
-        peer_id = hivemind.PeerID.from_base58(Multiaddr(addr)["p2p"])
+        peer_id = hypermind.PeerID.from_base58(Multiaddr(addr)["p2p"])
         if peer_id not in bootstrap_peer_ids:
             bootstrap_peer_ids.append(peer_id)
 
@@ -149,10 +149,10 @@ def fetch_health_state2(dht: hivemind.DHT) -> dict:
         update_duration=time.perf_counter() - start_time
     )
 
-def get_online_peers(dht: hivemind.DHT) -> List:
+def get_online_peers(dht: hypermind.DHT) -> List:
     bootstrap_peer_ids = []
     for addr in INITIAL_PEERS:
-        peer_id = hivemind.PeerID.from_base58(Multiaddr(addr)["p2p"])
+        peer_id = hypermind.PeerID.from_base58(Multiaddr(addr)["p2p"])
         if peer_id not in bootstrap_peer_ids:
             bootstrap_peer_ids.append(peer_id)
 

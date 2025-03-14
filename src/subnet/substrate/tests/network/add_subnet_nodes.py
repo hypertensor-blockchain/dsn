@@ -20,7 +20,7 @@ def test_add_subnet_nodes(count: int, path: str):
 def test_add_subnet_node(idx: int, subnet_id: int):
   print("test_add_subnet_node")
   substrate_config = get_substrate_config(idx)
-  print("account_id: " + str(substrate_config.account_id))
+  print("hotkey: " + str(substrate_config.hotkey))
   receipt = add_subnet_node(substrate_config.interface, substrate_config.keypair, subnet_id, PEER_IDS[idx], 1000e18)
   assert receipt.is_success, "add_subnet_node not successful"
 

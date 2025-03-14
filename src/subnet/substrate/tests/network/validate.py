@@ -18,7 +18,7 @@
 # import threading
 # from petals.substrate.chain_functions import get_submittables, get_min_required_subnet_consensus_submit_epochs, get_subnet_id_by_path, attest, get_epoch_length, get_subnet_data, get_subnet_id_by_path, get_rewards_submission, get_rewards_validator, validate
 
-# from hivemind.utils import get_logger
+# from hypermind.utils import get_logger
 
 # logger = get_logger(__name__)
 
@@ -36,11 +36,11 @@
 
 #   If after, it will begin to validate and or attest epochs
 #   """
-#   def __init__(self, path: str, account_id: str, phrase: str, url: str):
+#   def __init__(self, path: str, hotkey: str, phrase: str, url: str):
 #     super().__init__()
 #     self.subnet_id = None # Not required in case of not initialized yet
 #     self.path = path
-#     self.account_id = account_id
+#     self.hotkey = hotkey
 #     self.subnet_accepting_consensus = False
 #     self.subnet_node_eligible = False
 #     self.subnet_initialized = 9223372036854775807 # max int
@@ -99,7 +99,7 @@
 #           submittable_nodes = get_submittables(self.substrate_config.interface, self.subnet_id)
 
 #           for node_set in submittable_nodes:
-#             if node_set[0] == self.account_id:
+#             if node_set[0] == self.hotkey:
 #               self.subnet_node_eligible = True
 #               break
           
@@ -120,7 +120,7 @@
 #         else:
 #           logger.info("Validator for epoch %s is %s" % (epoch, validator))
 
-#         is_validator = validator == self.account_id
+#         is_validator = validator == self.hotkey
 #         if is_validator:
 #           logger.info("We're the chosen validator for epoch %s, validating and auto-attesting..." % epoch)
 #           # check if validated 
@@ -349,7 +349,7 @@
 #     print("substrate_config")
 #     consensus = TestConsensus(
 #       path=MODEL_PATH, 
-#       account_id=substrate_config.account_id, 
+#       hotkey=substrate_config.hotkey, 
 #       phrase=f"//{str(num)}", 
 #       url=LOCAL_URL
 #     )

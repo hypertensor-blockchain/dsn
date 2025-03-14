@@ -15,18 +15,20 @@ import threading
 import time
 from typing import Dict, List, Optional, Sequence, Union
 
-import hivemind
+import hypermind
 import psutil
 import torch
 import torch.mps
-from hivemind import DHT, MAX_DHT_TIME_DISCREPANCY_SECONDS, BatchTensorDescriptor, get_dht_time
-from hivemind.moe.server.layers import add_custom_models_from_file
-from hivemind.moe.server.runtime import Runtime
-from hivemind.proto.runtime_pb2 import CompressionType
-from hivemind.utils.logging import get_logger
-from hivemind.proto import crypto_pb2
-from hivemind.utils.crypto import Ed25519PrivateKey
-from hivemind.utils.auth import POSAuthorizer
+from hypermind import DHT, MAX_DHT_TIME_DISCREPANCY_SECONDS, BatchTensorDescriptor, get_dht_time
+from hypermind.moe.server.layers import add_custom_models_from_file
+from hypermind.moe.server.runtime import Runtime
+from hypermind.proto.runtime_pb2 import CompressionType
+from hypermind.utils.logging import get_logger
+from hypermind.proto import crypto_pb2
+from hypermind.utils.crypto import Ed25519PrivateKey
+from hypermind.utils.auth import POSAuthorizer
+from hypermind.dht.crypto import Ed25519SignatureValidator
+
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
 from transformers import PretrainedConfig
@@ -52,6 +54,7 @@ from subnet.utils.version import get_compatible_model_repo
 
 logger = get_logger(__name__)
 
+logger.debug("DEBUG MESSAGE LOG HERE")
 
 class Server:
     """
@@ -163,6 +166,8 @@ class Server:
             reachable_via_relay = is_reachable is False  # if can't check reachability (returns None), run a full peer
             logger.info(f"This server is accessible {'via relays' if reachable_via_relay else 'directly'}")
 
+        self.record_validator = Ed25519SignatureValidator(private_key)
+        # self.record_validator = None
         self.dht = DHT(
             initial_peers=initial_peers,
             start=True,
@@ -170,6 +175,7 @@ class Server:
             use_relay=use_relay,
             use_auto_relay=use_auto_relay,
             client_mode=reachable_via_relay,
+            record_validators=() if self.record_validator is None else [self.record_validator],
             **dict(kwargs, authorizer=POSAuthorizer(private_key))
             # **kwargs,
         )
@@ -341,7 +347,7 @@ class Server:
                 cache_dir=self.cache_dir,
                 max_disk_space=self.max_disk_space,
             )
-
+        
         num_blocks = math.floor((total_memory - autograd_memory) / total_memory_per_block)
         assert num_blocks >= 1, "Your GPU does not have enough memory to serve at least one block"
 
@@ -352,7 +358,7 @@ class Server:
         )
 
         logger.info(f"Total memory per block: {(total_memory_per_block)/1e6} MB")
-        logger.info(f"Total subnet memory: {(self.block_config.num_hidden_layers * total_memory_per_block)/1e6} MB")
+        logger.info(f"Total subnet memory:    {(self.block_config.num_hidden_layers * total_memory_per_block)/1e6} MB")
 
         return num_blocks
 
@@ -392,6 +398,7 @@ class Server:
                 quant_type=self.quant_type,
                 tensor_parallel_devices=self.tensor_parallel_devices,
                 should_validate_reachability=self.should_validate_reachability,
+                record_validator=self.record_validator,
                 start=True,
             )
             try:
@@ -399,6 +406,7 @@ class Server:
 
                 while True:
                     timeout = random.random() * 2 * self.mean_balance_check_period
+                    logger.debug("ayo test here now")
                     if self.stop.wait(timeout):
                         return
 
@@ -440,6 +448,7 @@ class Server:
         time.sleep(random.random() * 2 * self.mean_block_selection_delay)
 
         module_infos = get_remote_module_infos(self.dht, self.module_uids, latest=True)
+
         return block_selection.choose_best_blocks(self.num_blocks, module_infos)
 
     def _should_choose_other_blocks(self) -> bool:
@@ -492,6 +501,7 @@ class ModuleContainer(threading.Thread):
         quant_type: QuantType,
         tensor_parallel_devices: Sequence[torch.device],
         should_validate_reachability: bool,
+        record_validator: Optional[Ed25519SignatureValidator] = None,
         **kwargs,
     ) -> ModuleContainer:
         module_uids = [f"{dht_prefix}{UID_DELIMITER}{block_index}" for block_index in block_indices]
@@ -507,6 +517,7 @@ class ModuleContainer(threading.Thread):
             memory_cache=memory_cache,
             update_period=update_period,
             expiration=expiration,
+            record_validator=record_validator,
             daemon=True,
         )
         dht_announcer.start()
@@ -516,7 +527,6 @@ class ModuleContainer(threading.Thread):
 
         blocks = {}
         try:
-            logger.info("Loading load_pretrained_block")
             for module_uid, block_index in zip(module_uids, block_indices):
                 block = load_pretrained_block(
                     converted_model_name_or_path,
@@ -680,7 +690,7 @@ class ModuleContainer(threading.Thread):
         Please note that terminating container otherwise (e.g. by killing processes) may result in zombie processes.
         If you did already cause a zombie outbreak, your only option is to kill them with -9 (SIGKILL).
         """
-        self.dht_announcer.announce(ServerState.OFFLINE)
+        # self.dht_announcer.announce(ServerState.OFFLINE)
         logger.info(f"Announced that blocks {list(self.module_backends.keys())} are offline")
 
         self.ready.clear()
@@ -719,6 +729,7 @@ class ModuleAnnouncerThread(threading.Thread):
         update_period: float,
         expiration: float,
         max_pinged: int = 5,
+        record_validator: Optional[Ed25519SignatureValidator] = None,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -746,6 +757,7 @@ class ModuleAnnouncerThread(threading.Thread):
             for i in range(self.server_info.start_block + 1, self.server_info.end_block + 1)
         ]
         self.ping_aggregator = PingAggregator(self.dht)
+        self.record_validator = record_validator
 
     def run(self) -> None:
         while True:
@@ -765,6 +777,7 @@ class ModuleAnnouncerThread(threading.Thread):
                 self.module_uids,
                 self.server_info,
                 expiration_time=get_dht_time() + self.expiration,
+                record_validator=self.record_validator,
             )
             if self.server_info.state == ServerState.OFFLINE:
                 break
@@ -790,7 +803,7 @@ class ModuleAnnouncerThread(threading.Thread):
         if state == ServerState.OFFLINE:
             self.join()
 
-    def _ping_next_servers(self) -> Dict[hivemind.PeerID, float]:
+    def _ping_next_servers(self) -> Dict[hypermind.PeerID, float]:
         module_infos = get_remote_module_infos(self.dht, self.next_uids, latest=True)
         middle_servers = {peer_id for info in module_infos[:-1] for peer_id in info.servers}
         pinged_servers = set(sample_up_to(middle_servers, self.max_pinged))
@@ -801,7 +814,7 @@ class ModuleAnnouncerThread(threading.Thread):
 
 
 class RuntimeWithDeduplicatedPools(Runtime):
-    """A version of hivemind.moe.server.runtime.Runtime that allows multiple backends to reuse a task pool"""
+    """A version of hypermind.moe.server.runtime.Runtime that allows multiple backends to reuse a task pool"""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

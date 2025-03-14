@@ -8,8 +8,8 @@ from queue import PriorityQueue
 from typing import Any, List, Optional, Sequence, Tuple, Union
 
 import torch
-from hivemind import get_logger
-from hivemind.utils.mpfuture import ALL_STATES, MPFuture
+from hypermind import get_logger
+from hypermind.utils.mpfuture import ALL_STATES, MPFuture
 
 logger = get_logger(__name__)
 
@@ -32,7 +32,7 @@ class PrioritizedTaskPool(threading.Thread):
     returns results (or exception) to the corresponding ConnectionHandler. Runs a background process.
     A single PrioritizedTaskPool services a specific function (e.g. layer1.forward, layer2.forward or layer1.backward)
 
-    :note: unlike hivemind.moe TaskPool, this pool does *not* combine incoming requests into batches.
+    :note: unlike hypermind.moe TaskPool, this pool does *not* combine incoming requests into batches.
       This would require grouping requests of different length.
 
     :param process_func: function to be applied to every formed batch; called by Runtime
@@ -86,7 +86,7 @@ class PrioritizedTaskPool(threading.Thread):
             self._ordered_tasks.put(task, block=True)
 
     def terminate(self):
-        """An alias for hivemind.Runtime that assumes that each TaskPool is a process"""
+        """An alias for hypermind.Runtime that assumes that each TaskPool is a process"""
         self.shutdown()
 
     def shutdown(self):

@@ -10,15 +10,15 @@ import threading
 import time
 from typing import Dict, List, Optional, Sequence, Union
 
-import hivemind
+import hypermind
 import psutil
 import torch
 import torch.mps
-from hivemind import DHT, MAX_DHT_TIME_DISCREPANCY_SECONDS, BatchTensorDescriptor, get_dht_time
-from hivemind.moe.server.layers import add_custom_models_from_file
-from hivemind.moe.server.runtime import Runtime
-from hivemind.proto.runtime_pb2 import CompressionType
-from hivemind.utils.logging import get_logger
+from hypermind import DHT, MAX_DHT_TIME_DISCREPANCY_SECONDS, BatchTensorDescriptor, get_dht_time
+from hypermind.moe.server.layers import add_custom_models_from_file
+from hypermind.moe.server.runtime import Runtime
+from hypermind.proto.runtime_pb2 import CompressionType
+from hypermind.utils.logging import get_logger
 from transformers import PretrainedConfig
 
 import subnet
@@ -54,7 +54,7 @@ class Server:
         self,
         *,
         initial_peers: List[str],
-        account_id: str,
+        hotkey: str,
         dht_prefix: Optional[str],
         converted_model_name_or_path: str,
         public_name: Optional[str] = None,
@@ -98,7 +98,7 @@ class Server:
     ):
         """Create a server with one or more bloom blocks. See run_server.py for documentation."""
         self.is_validator = False
-        self.account_id = account_id
+        self.hotkey = hotkey
 
         converted_model_name_or_path = get_compatible_model_repo(converted_model_name_or_path)
         self.converted_model_name_or_path = converted_model_name_or_path
@@ -824,7 +824,7 @@ class ModuleAnnouncerThread(threading.Thread):
         if state == ServerState.OFFLINE:
             self.join()
 
-    def _ping_next_servers(self) -> Dict[hivemind.PeerID, float]:
+    def _ping_next_servers(self) -> Dict[hypermind.PeerID, float]:
         module_infos = get_remote_module_infos(self.dht, self.next_uids, latest=True)
         middle_servers = {peer_id for info in module_infos[:-1] for peer_id in info.servers}
         pinged_servers = set(sample_up_to(middle_servers, self.max_pinged))
@@ -835,7 +835,7 @@ class ModuleAnnouncerThread(threading.Thread):
 
 
 class RuntimeWithDeduplicatedPools(Runtime):
-    """A version of hivemind.moe.server.runtime.Runtime that allows multiple backends to reuse a task pool"""
+    """A version of hypermind.moe.server.runtime.Runtime that allows multiple backends to reuse a task pool"""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

@@ -2,7 +2,7 @@ import dataclasses
 import time
 from typing import Iterable, List, Optional, Tuple
 
-from hivemind import get_logger
+from hypermind import get_logger
 
 from subnet.data_structures import ModuleUID, RemoteModuleInfo, RemoteSpanInfo, ServerState
 from subnet.utils.dht import compute_spans

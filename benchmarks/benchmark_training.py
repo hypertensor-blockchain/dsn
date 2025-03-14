@@ -6,7 +6,7 @@ from time import perf_counter
 
 import numpy as np
 import torch
-from hivemind.utils.logging import get_logger
+from hypermind.utils.logging import get_logger
 
 from subnet import AutoDistributedModelForCausalLM, AutoDistributedModelForSequenceClassification
 from subnet.constants import DTYPE_MAP, PUBLIC_INITIAL_PEERS
