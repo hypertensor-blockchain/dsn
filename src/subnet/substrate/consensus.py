@@ -336,7 +336,7 @@ class Consensus(threading.Thread):
       else:
         return False, AttestReason.ATTEST_FAILED
     else:
-      logger.info("Validators data is not valid, skipping attestation.")
+      logger.info("Retrieved data but not able Validator class yet, skipping attestation.")
       return False, AttestReason.SHOULD_NOT_ATTEST
   
   def is_submittable(self) -> bool:
@@ -594,6 +594,9 @@ class Consensus(threading.Thread):
 
     # Convert my_data to a set
     set2 = set(frozenset(d.items()) for d in my_data)
+
+    logger.info(f"Validator data: {set1}")
+    logger.info(f"Our data:       {set2}")
 
     success = set1 == set2
 
