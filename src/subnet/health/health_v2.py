@@ -169,6 +169,8 @@ def fetch_health_state3(dht: DHT) -> dict:
         )
         all_servers.update(model_servers)
 
+        logger.debug("Model Servers: ", model_servers)
+
 
         offset += model.num_blocks
 

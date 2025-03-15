@@ -12,7 +12,6 @@ def increment_counter(retry_state: RetryCallState):
     retry_counter += 1
     print(f"Retry {retry_counter}: {retry_state}")
 
-
 def get_block_number(substrate: SubstrateInterface):
   # @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(4))
   @retry(wait=wait_fixed(BLOCK_SECS+1), stop=stop_after_attempt(4))

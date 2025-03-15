@@ -20,7 +20,6 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 from subnet.client.remote_sequential import RemoteSequential
 from subnet.constants import TEMP_INITIAL_PEERS_LOCATION
 from subnet.server.throughput import synchronize
-# from subnet.substrate.chain_data import SubnetNode
 from subnet.substrate.utils import get_included_nodes
 from subnet.utils.auto_config import AutoDistributedConfig
 
@@ -120,6 +119,7 @@ class IncentivesProtocol():
 
     def get_health_state(self):
         state_dict = fetch_health_state3(self.dht)
+        logger.debug("State Dict: ", state_dict)
         return state_dict
 
     def clean_model_report(self, state_dict) -> List:
