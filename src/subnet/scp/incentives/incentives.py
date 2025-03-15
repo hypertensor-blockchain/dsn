@@ -20,7 +20,6 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 from subnet.client.remote_sequential import RemoteSequential
 from subnet.constants import TEMP_INITIAL_PEERS_LOCATION
 from subnet.server.throughput import synchronize
-# from subnet.substrate.chain_data import SubnetNode
 from subnet.substrate.utils import get_included_nodes
 from subnet.utils.auto_config import AutoDistributedConfig
 
@@ -92,6 +91,7 @@ class IncentivesProtocol():
     async def run(self) -> Dict:
         try:
             state_dict = self.get_health_state()
+            logger.debug("State Dict: ", state_dict)
 
             if state_dict == None:
                 return {
@@ -100,6 +100,7 @@ class IncentivesProtocol():
                 }
             
             state_dict = self.clean_model_report(state_dict)
+            logger.debug("Cleaned State Dict: ", state_dict)
 
             """Try to get the speed scores"""
             if self.benchmark_rps:
