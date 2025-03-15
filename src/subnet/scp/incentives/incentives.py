@@ -91,7 +91,7 @@ class IncentivesProtocol():
     async def run(self) -> Dict:
         try:
             state_dict = self.get_health_state()
-            logger.debug("State Dict: ", state_dict)
+            logger.debug(f"State Dict: {state_dict}")
 
             if state_dict == None:
                 return {
@@ -100,7 +100,7 @@ class IncentivesProtocol():
                 }
             
             state_dict = self.clean_model_report(state_dict)
-            logger.debug("Cleaned State Dict: ", state_dict)
+            logger.debug(f"Cleaned State Dict: {state_dict}")
 
             """Try to get the speed scores"""
             if self.benchmark_rps:

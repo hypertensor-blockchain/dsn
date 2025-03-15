@@ -162,6 +162,8 @@ def fetch_health_state3(dht: DHT) -> dict:
 
         module_infos = get_remote_module_infos(dht, block_uids, latest=True)
 
+        logger.debug(f"Module Infos: {module_infos}")
+
         all_servers = {}
         offset = 0
         model_servers = compute_spans(
@@ -169,8 +171,7 @@ def fetch_health_state3(dht: DHT) -> dict:
         )
         all_servers.update(model_servers)
 
-        logger.debug("Model Servers: ", model_servers)
-
+        logger.debug(f"Model Servers: {model_servers}")
 
         offset += model.num_blocks
 
