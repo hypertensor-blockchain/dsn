@@ -30,7 +30,8 @@ from subnet.substrate.config import SubstrateConfigCustom
 from subnet.substrate.chain_functions import get_epoch_length
 from subnet.utils.math_utils import remove_outliers_adaptive, remove_outliers_iqr
 
-logger = hypermind.get_logger(__name__)
+# logger = hypermind.get_logger(__name__)
+logger = hypermind.get_logger("hypermind")
 
 BLOCK_WEIGHT = 0.5
 RPS_WEIGHT = 1 - BLOCK_WEIGHT

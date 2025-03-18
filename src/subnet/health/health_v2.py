@@ -16,7 +16,8 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 from .config import *
 from .p2p_utils import check_reachability_parallel, get_peers_ips, extract_peer_ip_info
 
-logger = logging.getLogger(__name__)
+# logger = logging.getLogger(__name__)
+logger = logging.get_logger("hypermind")
 
 @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(10))
 def fetch_health_state2(dht: DHT) -> dict:
