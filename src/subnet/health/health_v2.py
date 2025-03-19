@@ -1,6 +1,4 @@
-import os
 import datetime
-import logging
 import time
 from dataclasses import asdict
 from functools import partial
@@ -8,6 +6,7 @@ from typing import List
 
 import numpy as np
 from hypermind import DHT, PeerID
+from hypermind.utils.logging import get_logger
 from hypermind.p2p.multiaddr import Multiaddr
 from subnet.data_structures import UID_DELIMITER, ServerState
 from subnet.utils.dht import compute_spans, get_remote_module_infos
@@ -17,7 +16,7 @@ from .config import *
 from .p2p_utils import check_reachability_parallel, get_peers_ips, extract_peer_ip_info
 
 # logger = logging.getLogger(__name__)
-logger = logging.get_logger("hypermind")
+logger = get_logger("hypermind")
 
 @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(10))
 def fetch_health_state2(dht: DHT) -> dict:
